@@ -65,12 +65,57 @@ something proposes re-adding them — which is how the library records what does
 
 ## Install
 
-This repo is its own single-plugin marketplace:
+This repo is its own single-plugin marketplace, so you add it once as a
+marketplace, then install the `forge` plugin from it. Pick the route that matches
+where you use Claude Code. All three install to the same place, so a plugin
+installed one way shows up in the others.
+
+### Prerequisites
+
+- **git:** Claude Code fetches the marketplace with it.
+  On Windows, install [Git for Windows](https://git-scm.com/download/win)
+  (`winget install --id Git.Git -e`); Claude Code also uses its Git Bash to run
+  commands there.
+- **Node.js 20+:** Forge's `forge` command runs on it
+  (`winget install --id OpenJS.NodeJS.LTS -e` on Windows).
+- **GitHub CLI (`gh`)** (optional): lets `/forge:setup` create your lesson repo
+  for you (`winget install --id GitHub.cli -e`, then `gh auth login`).
+
+Open a new terminal after installing, so the new commands are found.
+
+### Option A: Claude Code in the terminal
+
+Start `claude`, then:
 
 ```
 /plugin marketplace add andrcami/Forge
 /plugin install forge@forge
 ```
+
+### Option B: from a shell, without starting Claude
+
+Use this route in any terminal, including where `/plugin` isn't available in the
+chat:
+
+```bash
+claude plugin marketplace add andrcami/Forge
+claude plugin install forge@forge
+claude plugin list          # forge@forge should show as enabled
+```
+
+If `claude` isn't found, install the CLI with `npm install -g @anthropic-ai/claude-code`.
+
+### Option C: VS Code or the desktop app (Manage Plugins)
+
+1. Open **Manage Plugins** → **Marketplaces**.
+2. Enter `andrcami/Forge` (or `https://github.com/andrcami/Forge`) and click **Add**.
+3. Switch to **Plugins**, find **forge**, and install it.
+4. Reload the window. In VS Code: Ctrl/Cmd+Shift+P → *Developer: Reload Window*.
+
+If the chat replies "`/plugin` isn't available in this environment", use this
+dialog or Option B instead.
+
+### Then: connect your lesson library
 
 When the plugin is enabled, Claude Code asks for two optional settings: the
 lesson library repository (`owner/name` or a git URL) and where to clone it.
@@ -90,7 +135,9 @@ It can also bring lessons from an older library along, and it writes
 `~/.claude/forge/config.json`. Until setup has run, a session-start check
 reminds Claude to suggest it once.
 
-Update later with `/plugin update forge@forge`. Use one lesson repo per context:
+**Updating:** `/plugin marketplace update forge`, then `/plugin update forge@forge`
+(or `claude plugin marketplace update forge` and `claude plugin update forge@forge`
+from a shell, or **Manage Plugins**). Use one lesson repo per context:
 for work, a repo owned by the employer.
 
 **One machine, several contexts:** choose "just this project" in setup. It writes
