@@ -20,5 +20,7 @@
       "description": "Where the lesson library is cloned on this machine, e.g. ~/dev/forge-lessons. /forge:setup clones it here.",
       "required": false
     }
-  }
+  },
+  "license": "MIT",
+  "repository": "https://github.com/andrcami/Forge"
 }

@@ -128,3 +128,12 @@ sample projects and what each one proves are described in `evals/README.md`.
 ## Design
 
 `docs/superpowers/specs/2026-08-31-forge-framework-design.md`
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md); every pull
+request is reviewed by the maintainer before it merges.
+
+## Licence
+
+[MIT](LICENSE)
