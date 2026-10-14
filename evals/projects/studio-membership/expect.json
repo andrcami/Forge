@@ -1,0 +1,29 @@
+{
+  "description": "Tool with a marketing page and a members' app, run with the three design skills installed — each surface gets its lead, and the generated tests actually run",
+  "phases": ["scope", "architect", "design", "build"],
+  "harness": {
+    "plugins": [
+      { "name": "ui-ux-pro-max", "repo": "nextlevelbuilder/ui-ux-pro-max-skill", "ref": "7246805992a42b7bba37d4cac83b01416f0c6c44" },
+      { "name": "taste-skill", "repo": "leonxlnx/taste-skill", "ref": "a60a36dc2bb3bb77ccf17f2f62041f5ca8a458b9" },
+      { "name": "design-motion-principles", "repo": "kylezantos/design-motion-principles", "ref": "4a9ca879f24a361f4dca4174fe2da0f67b5ddee3" }
+    ],
+    "e2e": true
+  },
+  "expect": {
+    "sizeClass": "tool",
+    "hasUI": true,
+    "approvals": ["scope", "architecture", "design"],
+    "escalation": null,
+    "skills": { "present": ["frontend", "qa", "gitflow", "context-memory"] },
+    "files": { "present": ["DESIGN.md", "e2e"] },
+    "contains": [
+      { "file": "DESIGN.md", "pattern": "ui-ux-pro-max", "why": "with it installed, ui-ux-pro-max leads the members' app and owns the tokens" },
+      { "file": "DESIGN.md", "pattern": "taste", "why": "with it installed, taste-skill leads the public page" },
+      { "file": "DESIGN.md", "pattern": "design-motion-principles", "why": "with it installed, design-motion-principles owns motion" },
+      { "file": "CLAUDE.md", "pattern": "DESIGN\\.md", "why": "CLAUDE.md links the binding design decision" }
+    ],
+    "notContains": [
+      { "file": "DESIGN.md", "pattern": "Lead skills:\\*{0,2}\\s*built-in", "why": "the built-in fallback must not lead when the design skills are installed" }
+    ]
+  }
+}

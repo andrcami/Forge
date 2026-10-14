@@ -1,0 +1,43 @@
+{
+  "name": "forge",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "verify": "tsc --noEmit && vitest run",
+    "eval": "tsx evals/src/run.ts",
+    "eval:check": "tsx evals/src/run.ts check",
+    "forge": "tsx src/cli.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrcami/Forge.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/andrcami/Forge/issues"
+  },
+  "homepage": "https://github.com/andrcami/Forge#readme",
+  "private": "true",
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "simple-git": "^3.36.0",
+    "tsx": "^4.23.15"
+  },
+  "bin": {
+    "forge": "bin/forge"
+  }
+}

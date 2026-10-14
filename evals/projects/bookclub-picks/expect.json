@@ -1,0 +1,69 @@
+{
+  "description": "Small web-app tool \u2014 short design phase, design-system + qa skills, Playwright smoke + axe at tool scale",
+  "phases": [
+    "scope",
+    "architect",
+    "design",
+    "build"
+  ],
+  "expect": {
+    "sizeClass": "tool",
+    "hasUI": true,
+    "approvals": [
+      "scope",
+      "architecture",
+      "design"
+    ],
+    "escalation": null,
+    "skills": {
+      "present": [
+        "frontend",
+        "qa",
+        "gitflow",
+        "context-memory"
+      ],
+      "absent": []
+    },
+    "files": {
+      "present": [
+        "DESIGN.md",
+        "docs/forge/architecture.md",
+        "e2e"
+      ]
+    },
+    "contains": [
+      {
+        "file": "DESIGN.md",
+        "pattern": "prefers-reduced-motion|reduced motion",
+        "why": "every DESIGN.md records the reduced-motion fallback"
+      },
+      {
+        "file": "DESIGN.md",
+        "pattern": "Emil|Jakub|Jhey|lens",
+        "why": "the motion lens weighting is recorded"
+      },
+      {
+        "file": ".claude/skills/qa/SKILL.md",
+        "pattern": "axe",
+        "why": "a tool with UI gets an axe scan on each flow's pages"
+      },
+      {
+        "file": ".claude/skills/qa/SKILL.md",
+        "pattern": "vote",
+        "why": "the vote flow is in v1 and must be in the flow-to-test map"
+      },
+      {
+        "file": "CLAUDE.md",
+        "pattern": "DESIGN\\.md",
+        "why": "CLAUDE.md links the binding design decision"
+      }
+    ],
+    "notContains": [
+      {
+        "file": "playwright.config.ts",
+        "pattern": "webkit|Desktop Safari",
+        "why": "cross-browser projects are product-class, not tool-class (mentioning WebKit as a later option is fine)"
+      }
+    ]
+  }
+}

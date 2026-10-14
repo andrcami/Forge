@@ -1,0 +1,12 @@
+{
+  "description": "Self-contradicting scope (live multi-user sync with no server and no P2P) — architecture escalates back to scope; design and build refuse",
+  "phases": ["scope", "architect", "design", "build"],
+  "expect": {
+    "sizeClass": "product",
+    "hasUI": true,
+    "approvals": ["scope"],
+    "escalation": { "owner": "scope" },
+    "skills": { "absent": ["frontend", "qa", "gitflow", "design-system"] },
+    "files": { "absent": ["DESIGN.md", "CLAUDE.md", "playwright.config.ts"] }
+  }
+}

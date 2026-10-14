@@ -1,0 +1,26 @@
+{
+  "description": "API-only tool — design phase refuses (no UI), qa skill without e2e or UI checks",
+  "phases": ["scope", "architect", "design", "build"],
+  "expect": {
+    "sizeClass": "tool",
+    "hasUI": false,
+    "approvals": ["scope", "architecture"],
+    "escalation": null,
+    "skills": {
+      "present": ["backend", "database", "qa", "gitflow", "context-memory"],
+      "absent": ["frontend", "design-system"]
+    },
+    "files": {
+      "present": ["docs/forge/architecture.md"],
+      "absent": ["DESIGN.md", "playwright.config.ts"]
+    },
+    "contains": [
+      { "file": ".claude/skills/qa/SKILL.md", "pattern": "signature|401", "why": "the signature-rejection acceptance check must become a test" },
+      { "file": ".claude/skills/qa/SKILL.md", "pattern": "idempot", "why": "the riskiest assumption (idempotent consumers) needs a guard" },
+      { "file": "docs/forge/architecture.md", "pattern": "\\bGo\\b|golang", "why": "team fluency in Go should dominate for a 3-person team" }
+    ],
+    "notContains": [
+      { "file": ".claude/skills/qa/SKILL.md", "pattern": "axe|toHaveScreenshot", "why": "no UI checks for an API-only service" }
+    ]
+  }
+}

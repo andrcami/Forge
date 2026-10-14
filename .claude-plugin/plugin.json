@@ -1,0 +1,24 @@
+{
+  "name": "forge",
+  "version": "0.6.1",
+  "description": "Drives a project from scope through architecture into development, generating project skills and accumulating portable lessons across every project it touches.",
+  "author": {
+    "name": "andrcami",
+    "url": "https://github.com/andrcami"
+  },
+  "userConfig": {
+    "lessons_repo": {
+      "type": "string",
+      "title": "Lesson library repository",
+      "description": "GitHub repo (owner/name) or git URL that holds your Forge lesson library. Leave empty to keep lessons on this machine only. Run /forge:setup to clone or create it.",
+      "required": false,
+      "default": ""
+    },
+    "lessons_path": {
+      "type": "directory",
+      "title": "Local clone of the lesson library",
+      "description": "Where the lesson library is cloned on this machine, e.g. ~/dev/forge-lessons. /forge:setup clones it here.",
+      "required": false
+    }
+  }
+}

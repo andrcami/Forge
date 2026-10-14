@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "forge",
+  "description": "Drives a project from scope through architecture into development, generating its skills from the architecture decision and accumulating portable lessons across every project it touches.",
+  "owner": {
+    "name": "andrcami",
+    "url": "https://github.com/andrcami"
+  },
+  "plugins": [
+    {
+      "name": "forge",
+      "description": "Scope, architecture, and build phases for new projects, plus a git-backed library of engineering lessons shared across every project.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "description": "Static marketing page with a fixed brand — brand values survive into DESIGN.md, no backend or database",
+  "phases": ["scope", "architect", "design", "build"],
+  "expect": {
+    "sizeClass": "tool",
+    "hasUI": true,
+    "approvals": ["scope", "architecture", "design"],
+    "escalation": null,
+    "skills": {
+      "present": ["qa", "gitflow", "context-memory"],
+      "absent": ["backend", "database"]
+    },
+    "files": { "present": ["DESIGN.md"] },
+    "contains": [
+      { "file": "DESIGN.md", "pattern": "#1F3A2E", "why": "fixed brand colours are constraints, not suggestions" },
+      { "file": "DESIGN.md", "pattern": "#E9B44C", "why": "fixed brand accent must be kept" },
+      { "file": "DESIGN.md", "pattern": "Fraunces", "why": "fixed brand typeface must be kept" },
+      { "file": "DESIGN.md", "pattern": "marketing|public", "why": "the surface is a public page, which decides the visual lead" },
+      { "file": "docs/forge/scope.md", "pattern": "no backend|static", "why": "the non-goal that rules out a server must be recorded" }
+    ]
+  }
+}

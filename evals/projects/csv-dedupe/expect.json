@@ -1,0 +1,15 @@
+{
+  "description": "Throwaway CLI script — architecture and design are skipped, no qa skill, no UI scaffolding",
+  "phases": ["scope", "architect", "design", "build"],
+  "expect": {
+    "sizeClass": "throwaway",
+    "hasUI": false,
+    "approvals": ["scope"],
+    "escalation": null,
+    "skills": {
+      "present": ["gitflow", "context-memory"],
+      "absent": ["qa", "frontend", "design-system", "database"]
+    },
+    "files": { "absent": ["docs/forge/architecture.md", "DESIGN.md", "playwright.config.ts", "e2e"] }
+  }
+}

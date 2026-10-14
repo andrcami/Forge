@@ -1,0 +1,8 @@
+#!/bin/sh
+# Forge command line — see src/cli.ts. Runs from any directory.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [ ! -x "$ROOT/node_modules/.bin/tsx" ]; then
+  echo "forge: dependencies are not installed — run: (cd \"$ROOT\" && npm install)" >&2
+  exit 1
+fi
+exec "$ROOT/node_modules/.bin/tsx" "$ROOT/src/cli.ts" "$@"

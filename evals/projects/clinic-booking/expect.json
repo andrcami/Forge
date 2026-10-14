@@ -1,0 +1,101 @@
+{
+  "description": "Multi-tenant product with app + public surfaces and EU PII \u2014 full design, product-scale qa with tenant-isolation guard",
+  "phases": [
+    "scope",
+    "architect",
+    "design",
+    "build"
+  ],
+  "expect": {
+    "sizeClass": "product",
+    "hasUI": true,
+    "approvals": [
+      "scope",
+      "architecture",
+      "design"
+    ],
+    "escalation": null,
+    "skills": {
+      "present": [
+        "backend",
+        "database",
+        "frontend",
+        "qa",
+        "devops",
+        "gitflow",
+        "context-memory"
+      ]
+    },
+    "files": {
+      "present": [
+        "DESIGN.md",
+        "docs/forge/architecture.md",
+        "e2e"
+      ]
+    },
+    "contains": [
+      {
+        "file": "docs/forge/architecture.md",
+        "pattern": "tenant",
+        "why": "multi-tenancy is a binding architecture decision"
+      },
+      {
+        "file": "docs/forge/architecture.md",
+        "pattern": "EU|GDPR|residen",
+        "why": "data residency constrains hosting"
+      },
+      {
+        "file": "docs/forge/architecture.md",
+        "pattern": "double.?book|exclusion|unique",
+        "why": "the no-double-booking invariant needs a decided enforcement"
+      },
+      {
+        "file": "DESIGN.md",
+        "pattern": "Rejected",
+        "why": "a product gets three directions with the losers recorded"
+      },
+      {
+        "file": "DESIGN.md",
+        "pattern": "Emil",
+        "why": "hundreds-a-day staff use weights the restraint lens"
+      },
+      {
+        "file": "DESIGN.md",
+        "pattern": "marketing|public",
+        "why": "both app and public surfaces are in scope"
+      },
+      {
+        "file": ".claude/skills/qa/SKILL.md",
+        "pattern": "tenant|clinic [AB]\\b|cross-clinic|\\bRLS\\b",
+        "why": "tenant isolation needs a guard test"
+      },
+      {
+        "file": ".claude/skills/qa/SKILL.md",
+        "pattern": "webkit",
+        "why": "product class runs WebKit as well as Chromium"
+      },
+      {
+        "file": ".claude/skills/qa/SKILL.md",
+        "pattern": "toHaveScreenshot|visual",
+        "why": "product class runs visual regression"
+      },
+      {
+        "file": ".claude/skills/qa/SKILL.md",
+        "pattern": "keyboard",
+        "why": "product class checks keyboard paths per flow"
+      },
+      {
+        "file": ".claude/skills/qa/SKILL.md",
+        "pattern": "remind",
+        "why": "the reminder flow is in v1 and must be mapped to a test"
+      }
+    ],
+    "notContains": [
+      {
+        "file": "docs/forge/scope.md",
+        "pattern": "\\|\\s*no-?show and utili[sz]ation[^|]*\\|\\s*\u2713",
+        "why": "stats were cut from v1"
+      }
+    ]
+  }
+}
