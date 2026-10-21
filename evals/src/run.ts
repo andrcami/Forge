@@ -107,7 +107,9 @@ function runPhase(cwd: string, phase: string, opts: { yolo: boolean; model?: str
   if (opts.model) args.push('--model', opts.model)
 
   return new Promise((res, rej) => {
-    const child = spawn('claude', args, { cwd, stdio: ['ignore', 'pipe', 'inherit'] })
+    // the eval tests the phases, not whether this checkout is the newest release
+    const env = { ...process.env, FORGE_NO_UPDATE_CHECK: '1' }
+    const child = spawn('claude', args, { cwd, env, stdio: ['ignore', 'pipe', 'inherit'] })
     let stdout = ''
     child.stdout.on('data', d => { stdout += d })
     child.on('error', rej)

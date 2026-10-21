@@ -162,7 +162,11 @@ reminds Claude to suggest it once.
 
 **Updating:** `/plugin marketplace update forge`, then `/plugin update forge@forge`
 (or `claude plugin marketplace update forge` and `claude plugin update forge@forge`
-from a shell, or **Manage Plugins**). Use one lesson repo per context:
+from a shell, or **Manage Plugins**). Start a new session afterwards so the
+new hooks load. When a newer version is out, Forge mentions it once at the start
+of a session; it checks GitHub at most once a day, in the background, and never
+updates anything itself. Turn the notice off with `"updateCheck": false` in
+`~/.claude/forge/config.json`. Use one lesson repo per context:
 for work, a repo owned by the employer.
 
 **One machine, several contexts:** choose "just this project" in setup. It writes
