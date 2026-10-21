@@ -9,8 +9,8 @@ This applies to everything a harvest writes or proposes: library lessons,
 not apply to chat. Chat can be as terse as the user likes (caveman mode, for
 example). A fragment that is clear in conversation is ambiguous in a file.
 
-STE's approved dictionary is not used. Technical names (`SQLITE_BUSY`,
-`http.Client`, `deliveries.attempt`) are allowed as they are.
+STE's approved dictionary is not used. Technical names (`ENOSPC`,
+`Cache-Control`, `orders.total_cents`) are allowed as they are.
 
 ## The rules
 
@@ -20,8 +20,8 @@ longer sentence.
 
 **2. Active voice.** Name who does what.
 
-> ✗ The signature is verified after the body is parsed.
-> ✓ The handler verifies the signature before it parses the body.
+> ✗ The upload is rejected after the file is scanned.
+> ✓ The server scans the file, then rejects the upload.
 
 **3. One word, one meaning.** Use one term for one thing, and the same term every
 time. Prefer the short, common word.
@@ -32,33 +32,31 @@ time. Prefer the short, common word.
 **4. Rules start with a command verb.** The first sentence of a lesson is the
 rule. It starts with the base form of a verb: *Set*, *Verify*, *Use*, *Do not*.
 
-> ✗ It's important that SQLite connections have a busy timeout.
-> ✓ Set a busy timeout on every SQLite connection.
+> ✗ It's important that cached pages have a short lifetime.
+> ✓ Set `max-age` to 60 seconds or less on cached pages.
 
 **5. No noun clusters.** Three nouns in a row at most. Break a longer cluster up
 with *of*, *for*, or a verb.
 
-> ✗ the delivery worker retry backoff configuration value
-> ✓ the value that sets the backoff between delivery retries
+> ✗ the image upload size limit error message
+> ✓ the error message for an image that is too large
 
 Also: one instruction per sentence, and keep articles (*a*, *an*, *the*).
 
 ## Shape of a lesson
 
 ```markdown
-Verify a webhook signature over the raw request body, before you parse it.
-Do not verify over re-encoded JSON.
+Store money as integer cents. Do not store it as a float.
 
-Evidence: the handler verified over `json.Marshal` of the parsed payload.
-Re-encoding changes key order and whitespace. About 3% of valid webhooks
-failed verification.
+Evidence: the checkout added `0.1 + 0.2` and charged 0.30000000000000004.
+The payment provider rejected the amount. About 1 in 500 orders failed.
 ```
 
 1. The rule: one or two command sentences.
 2. A blank line, then the evidence: what happened, in short active sentences.
 
 A `## Lessons` line in a skill is the rule sentence plus a one-clause source:
-`- Start attempt numbers at 1: the column default is 1 (PR #12).`
+`- Read `orders.total_cents` as cents, not dollars (PR #7).`
 
 ## Check before you write
 
