@@ -9,7 +9,7 @@
       "count": 2,
       "lessons": [
         {
-          "match": "raw (request )?bod(y|ies)|raw bytes|exact bytes",
+          "match": "raw\\s+(request\\s+)?(body|bodies|bytes)|exact\\s+bytes",
           "status": "observed",
           "tags": ["skill:*"],
           "evidence": 1,
