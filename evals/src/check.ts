@@ -1,6 +1,7 @@
 import { readFile, readdir, stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 import matter from 'gray-matter'
+import { parseLesson, type Lesson } from '../../src/lesson.js'
 
 /** An external plugin a sample runs with, pinned so a run is reproducible. */
 export interface PluginPin {
@@ -18,8 +19,17 @@ export interface VerifyStep {
   tail: string
 }
 
+/** Checks any sample can make on the files it leaves behind. */
+interface ContentExpect {
+  skills?: { present?: string[]; absent?: string[] }
+  files?: { present?: string[]; absent?: string[] }
+  /** `file` may hold `*` in a path segment: contains needs one match, notContains forbids every match. */
+  contains?: Array<{ file: string; pattern: string; why: string }>
+  notContains?: Array<{ file: string; pattern: string; why: string }>
+}
+
 /** What a sample project should look like after the phases it lists have run. */
-export interface Expectation {
+export interface PhaseExpectation {
   description: string
   /** Phases the runner invokes, in order. A phase that should refuse is still listed. */
   phases: Array<'scope' | 'architect' | 'design' | 'build'>
@@ -30,19 +40,59 @@ export interface Expectation {
     /** Also run the generated e2e command (needs a browser). Install and test always run. */
     e2e?: boolean
   }
-  expect: {
+  expect: ContentExpect & {
     sizeClass: 'throwaway' | 'tool' | 'product'
     hasUI: boolean
     /** Approvals that must be stamped. Any approval not listed must be absent. */
     approvals: Array<'scope' | 'architecture' | 'design'>
     /** null: no escalation may be open. An object: one must be, owned by this phase. */
     escalation: null | { owner: 'scope' | 'architecture' | 'design' }
-    skills?: { present?: string[]; absent?: string[] }
-    files?: { present?: string[]; absent?: string[] }
-    contains?: Array<{ file: string; pattern: string; why: string }>
-    notContains?: Array<{ file: string; pattern: string; why: string }>
   }
 }
+
+/** A lesson the library must hold after a harvest. */
+export interface LibraryLesson {
+  /** regex the lesson body must match (case-insensitive) */
+  match: string
+  why: string
+  id?: string
+  status?: 'observed' | 'confirmed' | 'retired'
+  /** tags it must carry; a trailing `*` matches a namespace, e.g. `skill:*` */
+  tags?: string[]
+  /** how many evidence entries it must have */
+  evidence?: number
+}
+
+/**
+ * What a project should look like after `/forge:harvest` ran on a feature
+ * branch. The runner builds the branch: `seed/` committed on main, then
+ * `branch/` laid over it and committed on `harness.branch.name`.
+ */
+export interface HarvestExpectation {
+  description: string
+  phases: ['harvest']
+  harness: {
+    branch: { name: string; message: string }
+    /** take seed/ from another sample instead of this one */
+    seedFrom?: string
+  }
+  expect: ContentExpect & {
+    /** The library is the one the workspace's .forge.json names. */
+    library: {
+      /** exactly this many lessons */
+      count?: number
+      lessons?: LibraryLesson[]
+      /** no lesson body may match */
+      absent?: Array<{ pattern: string; why: string }>
+    }
+    /** files that must be byte-for-byte as the runner set them up */
+    unchanged?: string[]
+  }
+}
+
+export type Expectation = PhaseExpectation | HarvestExpectation
+
+export const isHarvest = (e: Expectation): e is HarvestExpectation => e.phases?.[0] === 'harvest'
 
 export interface Finding {
   check: string
@@ -58,25 +108,45 @@ export function validateExpectation(e: unknown): string[] {
   const x = e as Expectation
   if (!x || typeof x !== 'object') return ['not an object']
   if (typeof x.description !== 'string' || !x.description) errs.push('description missing')
+  if (Array.isArray(x.phases) && x.phases[0] === 'harvest') return [...errs, ...validateHarvest(x as HarvestExpectation)]
   if (!Array.isArray(x.phases) || x.phases.length === 0) errs.push('phases missing')
   else if (x.phases.some(p => !PHASES.includes(p))) errs.push(`unknown phase in ${x.phases.join(',')}`)
   else if (x.phases[0] !== 'scope') errs.push('phases must start with scope')
-  for (const p of x.harness?.plugins ?? []) {
+  for (const p of (x as PhaseExpectation).harness?.plugins ?? []) {
     if (!p.name || !/^[\w.-]+\/[\w.-]+$/.test(p.repo ?? '') || !/^[0-9a-f]{40}$/.test(p.ref ?? '')) {
       errs.push(`harness plugin needs name, owner/repo, and a 40-char commit SHA: ${JSON.stringify(p)}`)
     }
   }
-  const ex = x.expect
+  const ex = (x as PhaseExpectation).expect
   if (!ex) return [...errs, 'expect missing']
   if (!['throwaway', 'tool', 'product'].includes(ex.sizeClass)) errs.push('expect.sizeClass invalid')
   if (typeof ex.hasUI !== 'boolean') errs.push('expect.hasUI must be boolean')
   if (!Array.isArray(ex.approvals) || ex.approvals.some(a => !APPROVALS.includes(a))) errs.push('expect.approvals invalid')
   if (ex.escalation !== null && !APPROVALS.includes(ex.escalation?.owner as string)) errs.push('expect.escalation invalid')
+  return [...errs, ...validateContent(ex)]
+}
+
+function validateContent(ex: ContentExpect): string[] {
+  const errs: string[] = []
   for (const c of [...(ex.contains ?? []), ...(ex.notContains ?? [])]) {
     if (!c.file || !c.pattern || !c.why) errs.push(`content check needs file, pattern, why: ${JSON.stringify(c)}`)
     else try { new RegExp(c.pattern, 'i') } catch { errs.push(`bad regex: ${c.pattern}`) }
   }
   return errs
+}
+
+function validateHarvest(x: HarvestExpectation): string[] {
+  const errs: string[] = []
+  if (x.phases.length !== 1) errs.push('a harvest sample runs harvest alone')
+  const b = x.harness?.branch
+  if (!b?.name || !b.message) errs.push('harness.branch needs name and message')
+  const lib = x.expect?.library
+  if (!lib) return [...errs, 'expect.library missing']
+  const regexes = [...(lib.lessons ?? []).map(l => l.match), ...(lib.absent ?? []).map(a => a.pattern)]
+  for (const l of lib.lessons ?? []) if (!l.match || !l.why) errs.push(`library lesson needs match and why: ${JSON.stringify(l)}`)
+  for (const a of lib.absent ?? []) if (!a.pattern || !a.why) errs.push(`library absent needs pattern and why: ${JSON.stringify(a)}`)
+  for (const r of regexes) if (r) try { new RegExp(r, 'i') } catch { errs.push(`bad regex: ${r}`) }
+  return [...errs, ...validateContent(x.expect)]
 }
 
 async function exists(p: string): Promise<boolean> {
@@ -115,13 +185,41 @@ function tableRows(block: string): string[][] {
   return lines.slice(2).map(l => l.split('|').slice(1, -1).map(c => c.trim()))
 }
 
+/** Workspace-relative files matching a path whose segments may hold `*`. */
+async function matchFiles(dir: string, pattern: string): Promise<string[]> {
+  let found = ['']
+  for (const seg of pattern.split('/')) {
+    if (!seg.includes('*')) { found = found.map(f => f ? `${f}/${seg}` : seg); continue }
+    const re = new RegExp(`^${seg.split('*').map(p => p.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('[^/]*')}$`)
+    const next: string[] = []
+    for (const f of found) {
+      const names = await readdir(join(dir, f)).catch(() => [] as string[])
+      next.push(...names.filter(n => re.test(n)).map(n => f ? `${f}/${n}` : n))
+    }
+    found = next
+  }
+  const real: string[] = []
+  for (const f of found) if (await exists(join(dir, f))) real.push(f)
+  return real
+}
+
 /**
  * Checks a workspace that Forge phases have run in. `forgeRoot` is where the
  * templates live, so the document checks follow the templates as they change.
  */
 export async function checkProject(dir: string, exp: Expectation, forgeRoot: string): Promise<Finding[]> {
   const out: Finding[] = []
-  const fail = (check: string, message: string) => out.push({ check, message })
+  const fail: Fail = (check, message) => { out.push({ check, message }) }
+  if (isHarvest(exp)) await checkHarvest(dir, exp, fail)
+  else if (!(await checkPhases(dir, exp, forgeRoot, fail))) return out
+  await checkContent(dir, exp.expect, fail)
+  return out
+}
+
+type Fail = (check: string, message: string) => void
+
+/** The phase run's state, documents, and build output. False when there is no usable state to check further. */
+async function checkPhases(dir: string, exp: PhaseExpectation, forgeRoot: string, fail: Fail): Promise<boolean> {
   const tpl = (name: string) => readFile(join(forgeRoot, 'references', 'templates', name), 'utf8')
   const ex = exp.expect
 
@@ -129,12 +227,12 @@ export async function checkProject(dir: string, exp: Expectation, forgeRoot: str
   const rawState = await readIf(join(dir, 'docs', 'forge', 'state.json'))
   if (!rawState) {
     fail('state', 'docs/forge/state.json missing')
-    return out
+    return false
   }
   let state: Record<string, any>
   try { state = JSON.parse(rawState) } catch {
     fail('state', 'state.json is not valid JSON')
-    return out
+    return false
   }
   if (state.sizeClass !== ex.sizeClass) fail('state.sizeClass', `expected ${ex.sizeClass}, got ${state.sizeClass}`)
   if (state.hasUI !== ex.hasUI) fail('state.hasUI', `expected ${ex.hasUI}, got ${state.hasUI}`)
@@ -188,9 +286,10 @@ export async function checkProject(dir: string, exp: Expectation, forgeRoot: str
   }
 
   const built = exp.phases.includes('build') && !ex.escalation
+  if (!built) return true
   const skills = await listSkills(dir)
 
-  if (built) {
+  {
     for (const rel of ['CLAUDE.md', 'docs/context/status.md', 'docs/context/decisions.md']) {
       if (!(await has(rel))) fail('build', `${rel} missing`)
     }
@@ -255,6 +354,52 @@ export async function checkProject(dir: string, exp: Expectation, forgeRoot: str
     }
   }
 
+  return true
+}
+
+/** What `/forge:harvest` left in the library and the project. */
+async function checkHarvest(dir: string, exp: HarvestExpectation, fail: Fail): Promise<void> {
+  const want = exp.expect.library
+  const project = await readIf(join(dir, '.forge.json'))
+  const libPath = project ? JSON.parse(project).store?.path : null
+  if (typeof libPath !== 'string') { fail('harness', 'the workspace has no .forge.json naming a library'); return }
+  const libDir = isAbsolute(libPath) ? libPath : join(dir, libPath)
+
+  const lessons: Lesson[] = []
+  for (const name of (await readdir(libDir).catch(() => [] as string[])).filter(n => n.endsWith('.md')).sort()) {
+    try { lessons.push(parseLesson(await readFile(join(libDir, name), 'utf8'))) } catch (e) {
+      fail('library', `${name} is not a valid lesson — ${(e as Error).message}`)
+    }
+  }
+  const ids = lessons.map(l => l.id).join(', ') || 'none'
+  if (want.count !== undefined && lessons.length !== want.count) {
+    fail('library', `expected ${want.count} lessons, found ${lessons.length}: ${ids}`)
+  }
+  const tagOk = (have: string[], t: string) =>
+    t.endsWith('*') ? have.some(h => h.startsWith(t.slice(0, -1))) : have.includes(t)
+  for (const w of want.lessons ?? []) {
+    const l = lessons.find(l => (w.id ? l.id === w.id : true) && new RegExp(w.match, 'i').test(l.body))
+    if (!l) { fail('library', `no lesson${w.id ? ` ${w.id}` : ''} matching /${w.match}/ (have: ${ids}) — ${w.why}`); continue }
+    if (w.status && l.status !== w.status) fail('library', `${l.id} is ${l.status}, expected ${w.status} — ${w.why}`)
+    for (const t of w.tags ?? []) if (!tagOk(l.tags, t)) fail('library', `${l.id} lacks tag ${t} (has ${l.tags.join(', ')}) — ${w.why}`)
+    if (w.evidence !== undefined && l.evidence.length !== w.evidence) {
+      fail('library', `${l.id} has ${l.evidence.length} evidence entries, expected ${w.evidence} — ${w.why}`)
+    }
+  }
+  for (const a of want.absent ?? []) {
+    for (const l of lessons) if (new RegExp(a.pattern, 'i').test(l.body)) fail('library', `${l.id} matches /${a.pattern}/ — ${a.why}`)
+  }
+
+  const before = JSON.parse((await readIf(join(dir, 'docs', 'eval', 'snapshot.json'))) ?? '{}') as Record<string, string | null>
+  for (const f of exp.expect.unchanged ?? []) {
+    if (!(f in before)) { fail('harness', `no snapshot of ${f}`); continue }
+    if ((await readIf(join(dir, f))) !== before[f]) fail('unchanged', `${f} was changed`)
+  }
+}
+
+/** Checks every sample makes: the harness could read Forge, and the sample's own file expectations. */
+async function checkContent(dir: string, ex: ContentExpect, fail: Fail): Promise<void> {
+  const has = (rel: string) => exists(join(dir, rel))
   // --- the phases could reach Forge's own templates and references ----------
   const assumptions = (await readIf(join(dir, 'docs', 'eval', 'assumptions.md'))) ?? ''
   const unreadable = assumptions.split('\n').some(l =>
@@ -265,19 +410,22 @@ export async function checkProject(dir: string, exp: Expectation, forgeRoot: str
   }
 
   // --- the sample's own expectations ---------------------------------------
+  const skills = await listSkills(dir)
   for (const s of ex.skills?.present ?? []) if (!skills.includes(s)) fail('skills', `expected skill ${s}`)
   for (const s of ex.skills?.absent ?? []) if (skills.includes(s)) fail('skills', `unexpected skill ${s}`)
   for (const f of ex.files?.present ?? []) if (!(await has(f))) fail('files', `expected ${f}`)
   for (const f of ex.files?.absent ?? []) if (await has(f)) fail('files', `unexpected ${f}`)
   for (const c of ex.contains ?? []) {
-    const body = await readIf(join(dir, c.file))
-    if (body === null) fail('contains', `${c.file} missing (${c.why})`)
-    else if (!new RegExp(c.pattern, 'i').test(body)) fail('contains', `${c.file} lacks /${c.pattern}/ — ${c.why}`)
+    const files = await matchFiles(dir, c.file)
+    const bodies = await Promise.all(files.map(f => readIf(join(dir, f))))
+    if (!files.length) fail('contains', `${c.file} missing (${c.why})`)
+    else if (!bodies.some(b => b !== null && new RegExp(c.pattern, 'i').test(b))) fail('contains', `${c.file} lacks /${c.pattern}/ — ${c.why}`)
   }
   for (const c of ex.notContains ?? []) {
-    const body = await readIf(join(dir, c.file))
-    if (body !== null && new RegExp(c.pattern, 'i').test(body)) fail('notContains', `${c.file} has /${c.pattern}/ — ${c.why}`)
+    for (const f of await matchFiles(dir, c.file)) {
+      const body = await readIf(join(dir, f))
+      if (body !== null && new RegExp(c.pattern, 'i').test(body)) fail('notContains', `${f} has /${c.pattern}/ — ${c.why}`)
+    }
   }
 
-  return out
 }

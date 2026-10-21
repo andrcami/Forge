@@ -1,0 +1,41 @@
+{
+  "description": "Harvest of a branch with real lessons: a new portable lesson, a second sighting, a project lesson, a rejected candidate, and a stale line to prune",
+  "phases": ["harvest"],
+  "harness": {
+    "branch": { "name": "delivery-hardening", "message": "Harden delivery: raw-body signatures, busy timeout, backoff, client timeout, status index" }
+  },
+  "expect": {
+    "library": {
+      "count": 2,
+      "lessons": [
+        {
+          "match": "raw\\s+(request\\s+)?(body|bodies|bytes)|exact\\s+bytes",
+          "status": "observed",
+          "tags": ["skill:*"],
+          "evidence": 1,
+          "why": "a new portable lesson enters observed, with the skill: tag that routes it"
+        },
+        {
+          "id": "sqlite-busy-timeout",
+          "match": "busy",
+          "status": "confirmed",
+          "evidence": 2,
+          "why": "a second sighting is written under the existing id, which appends evidence and promotes it"
+        }
+      ],
+      "absent": [
+        { "pattern": "http\\.Client|client timeout|no timeout by default", "why": "the user rejected the http.Client lesson: nothing unapproved enters the library" },
+        { "pattern": "1-based|0-based|zero-based|one-based", "why": "the attempt column is this project's schema detail: it stays in the project" },
+        { "pattern": "typo|recieve", "why": "branch trivia is not a lesson" }
+      ]
+    },
+    "contains": [
+      { "file": ".claude/skills/*/SKILL.md", "pattern": "1-based|one-based|starts at 1|0-based|zero-based", "why": "the project-specific lesson lands in the owning skill's ## Lessons" }
+    ],
+    "notContains": [
+      { "file": ".claude/skills/*/SKILL.md", "pattern": "has no index", "why": "harvest prunes a skill rule whose reason the branch closed (the index now exists)" },
+      { "file": ".claude/skills/*/SKILL.md", "pattern": "http\\.Client", "why": "the user rejected the http.Client lesson everywhere" },
+      { "file": ".claude/skills/*/SKILL.md", "pattern": "typo|recieve", "why": "branch trivia is not a lesson" }
+    ]
+  }
+}

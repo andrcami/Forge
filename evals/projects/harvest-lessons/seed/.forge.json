@@ -1,0 +1,4 @@
+{
+  "store": { "backend": "local", "path": "lib" },
+  "lessonCheckpoints": false
+}

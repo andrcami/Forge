@@ -1,0 +1,22 @@
+{
+  "description": "Harvest of a branch with nothing to learn: the library and the skills stay exactly as they were",
+  "phases": ["harvest"],
+  "harness": {
+    "branch": { "name": "readme-typo", "message": "Fix a typo in the README" },
+    "seedFrom": "harvest-lessons"
+  },
+  "expect": {
+    "library": {
+      "count": 1,
+      "lessons": [
+        { "id": "sqlite-busy-timeout", "match": "busy", "status": "observed", "evidence": 1, "why": "a branch that never touched SQLite is not a second sighting" }
+      ]
+    },
+    "unchanged": [
+      "lib/sqlite-busy-timeout.md",
+      ".claude/skills/backend/SKILL.md",
+      ".claude/skills/database/SKILL.md",
+      "CLAUDE.md"
+    ]
+  }
+}

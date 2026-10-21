@@ -4,6 +4,9 @@
  *   npm run eval -- [project…] [--yolo] [--no-verify] [--model <id>]
  *   npm run eval:check -- <workspace> <project>
  *
+ * A harvest sample instead starts from a git repo the runner builds: seed/ on
+ * main, branch/ laid over it on a feature branch. /forge:harvest then runs on it.
+ *
  * Each sample runs in a fresh temp workspace. The simulated user's answers
  * (brief.md) are copied in; the expectations (expect.json) never are, so the
  * phases cannot read what they are graded against.
@@ -13,7 +16,10 @@ import { access, cp, mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:f
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { checkProject, validateExpectation, type Expectation, type Finding, type PluginPin, type VerifyStep } from './check.js'
+import {
+  checkProject, isHarvest, validateExpectation,
+  type Expectation, type Finding, type HarvestExpectation, type PhaseExpectation, type PluginPin, type VerifyStep,
+} from './check.js'
 
 const FORGE = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const PROJECTS = join(FORGE, 'evals', 'projects')
@@ -43,9 +49,16 @@ const SCAFFOLD_TOOLS = [
   'go', 'cargo', 'mix', 'mkdir', 'ls', 'cat', 'touch', 'chmod',
 ].map(c => `Bash(${c}:*)`)
 
-const PHASE_COMMAND: Record<string, string> = {
-  scope: '/forge:scope', architect: '/forge:architect', design: '/forge:design', build: '/forge:build',
+const PHASE_PROMPT: Record<string, string> = {
+  scope: '/forge:scope — run this phase for the project in this directory.',
+  architect: '/forge:architect — run this phase for the project in this directory.',
+  design: '/forge:design — run this phase for the project in this directory.',
+  build: '/forge:build — run this phase for the project in this directory.',
+  harvest: '/forge:harvest — the current branch is finished and its PR is about to open; harvest it against main.',
 }
+
+/** Harvest reads and writes the library through the plugin's CLI, by name or by path. */
+const FORGE_CLI = ['Bash(forge:*)', `Bash(${join(FORGE, 'bin', 'forge')}:*)`]
 
 async function loadProject(name: string): Promise<{ brief: string; exp: Expectation }> {
   const dir = join(PROJECTS, name)
@@ -81,7 +94,7 @@ async function ensurePlugin(pin: PluginPin): Promise<string> {
 
 function runPhase(cwd: string, phase: string, opts: { yolo: boolean; model?: string; plugins: string[] }): Promise<number> {
   const args = [
-    '-p', `${PHASE_COMMAND[phase]} — run this phase for the project in this directory.`,
+    '-p', PHASE_PROMPT[phase],
     '--plugin-dir', FORGE,
     ...opts.plugins.flatMap(p => ['--plugin-dir', p]),
     '--add-dir', FORGE, // the skills read the plugin's references/; real installs can read the plugin cache
@@ -90,7 +103,7 @@ function runPhase(cwd: string, phase: string, opts: { yolo: boolean; model?: str
   ]
   if (opts.yolo) args.push('--permission-mode', 'bypassPermissions')
   else args.push('--permission-mode', 'acceptEdits', '--allowedTools',
-    ...SCAFFOLD_TOOLS)
+    ...SCAFFOLD_TOOLS, ...FORGE_CLI)
   if (opts.model) args.push('--model', opts.model)
 
   return new Promise((res, rej) => {
@@ -152,7 +165,7 @@ export default {
  * records the result in docs/eval/verify.json for the checker. A harness that
  * build claims runs, but does not, is the failure this exists to catch.
  */
-async function verifyBuild(cwd: string, exp: Expectation): Promise<void> {
+async function verifyBuild(cwd: string, exp: PhaseExpectation): Promise<void> {
   let commands: Record<string, string>
   try { commands = JSON.parse(await readFile(join(cwd, 'docs', 'forge', 'commands.json'), 'utf8')) } catch { return }
   const steps: Record<string, VerifyStep | 'skipped'> = {}
@@ -174,6 +187,31 @@ async function verifyBuild(cwd: string, exp: Expectation): Promise<void> {
     if (code !== 0) break
   }
   await writeFile(join(cwd, 'docs', 'eval', 'verify.json'), JSON.stringify(steps, null, 2))
+}
+
+/**
+ * Builds a harvest sample's repo: seed/ committed on main, then branch/ laid
+ * over it and committed on the feature branch. Snapshots the files the sample
+ * expects to stay unchanged, and keeps docs/eval out of git so the harvest
+ * sees only the branch's own work.
+ */
+async function buildBranch(workspace: string, name: string, exp: HarvestExpectation): Promise<void> {
+  const git = (...a: string[]) => execFileSync('git',
+    ['-c', 'user.name=Forge Eval', '-c', 'user.email=eval@forge.invalid', '-c', 'commit.gpgsign=false', ...a],
+    { cwd: workspace, stdio: 'ignore' })
+  await cp(join(PROJECTS, exp.harness.seedFrom ?? name, 'seed'), workspace, { recursive: true })
+  git('init', '-q', '--initial-branch=main')
+  await writeFile(join(workspace, '.git', 'info', 'exclude'), 'docs/eval/\n')
+  git('add', '-A')
+  git('commit', '-q', '-m', 'Initial state')
+  git('checkout', '-q', '-b', exp.harness.branch.name)
+  await cp(join(PROJECTS, name, 'branch'), workspace, { recursive: true })
+  git('add', '-A')
+  git('commit', '-q', '-m', exp.harness.branch.message)
+
+  const snapshot: Record<string, string | null> = {}
+  for (const f of exp.expect.unchanged ?? []) snapshot[f] = await readFile(join(workspace, f), 'utf8').catch(() => null)
+  await writeFile(join(workspace, 'docs', 'eval', 'snapshot.json'), JSON.stringify(snapshot, null, 2))
 }
 
 function report(name: string, exp: Expectation, findings: Finding[], workspace: string): boolean {
@@ -211,17 +249,18 @@ async function main() {
     const workspace = await mkdtemp(join(tmpdir(), `forge-eval-${name}-`))
     await mkdir(join(workspace, 'docs', 'eval'), { recursive: true })
     await writeFile(join(workspace, 'docs', 'eval', 'brief.md'), brief)
-    const seed = join(PROJECTS, name, 'seed')
-    await cp(seed, workspace, { recursive: true }).catch(() => {})
+    const pins = isHarvest(exp) ? [] : exp.harness?.plugins ?? []
+    if (isHarvest(exp)) await buildBranch(workspace, name, exp)
+    else await cp(join(PROJECTS, name, 'seed'), workspace, { recursive: true }).catch(() => {})
 
-    const plugins = await Promise.all((exp.harness?.plugins ?? []).map(ensurePlugin))
-    console.log(`\n▶ ${name}: ${exp.phases.join(' → ')}${plugins.length ? ` (with ${exp.harness!.plugins!.map(p => p.name).join(', ')})` : ''}`)
+    const plugins = await Promise.all(pins.map(ensurePlugin))
+    console.log(`\n▶ ${name}: ${exp.phases.join(' → ')}${pins.length ? ` (with ${pins.map(p => p.name).join(', ')})` : ''}`)
     for (const phase of exp.phases) {
       process.stdout.write(`  ${phase}… `)
       const code = await runPhase(workspace, phase, { yolo: flag('--yolo'), model, plugins })
       console.log(code === 0 ? 'done' : `exited ${code}`)
     }
-    if (exp.phases.includes('build') && !flag('--no-verify')) await verifyBuild(workspace, exp)
+    if (!isHarvest(exp) && exp.phases.includes('build') && !flag('--no-verify')) await verifyBuild(workspace, exp)
     const ok = report(name, exp, await checkProject(workspace, exp, FORGE), workspace)
     if (!ok) failed++
   }

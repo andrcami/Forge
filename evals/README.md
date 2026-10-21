@@ -36,9 +36,11 @@ samples a change touches to keep that usage small.
 | `clinic-booking` | product | app + marketing | Full design with both surfaces, tenancy, EU residency, double-booking invariant, product-scale `qa` (WebKit, visual, keyboard) |
 | `realtime-contradiction` | product | app | A self-contradicting scope: architecture escalates to scope, and design and build refuse |
 | `studio-membership` | tool | app + marketing | Runs **with the design skills installed**: ui-ux-pro-max leads the app, taste-skill the public page, design-motion-principles the motion. Its generated e2e suite is run too |
+| `harvest-lessons` | — | — | `/forge:harvest` on a branch with real lessons: a new portable lesson enters `observed` with a `skill:` tag, a second sighting promotes an existing lesson, a schema detail stays in the project skill, a rejected candidate is written nowhere, a rule whose reason the branch closed is pruned |
+| `harvest-quiet` | — | — | `/forge:harvest` on a branch with nothing to learn: the library and the skills stay byte-for-byte as they were |
 
 Together they cover every size class, UI and no UI, both design surfaces, the
-backward escalation path, and the path with external design skills installed. A unit test enforces that coverage, so a sample
+backward escalation path, the path with external design skills installed, and the harvest with and without lessons to fold in. A unit test enforces that coverage, so a sample
 can't be removed without it being noticed.
 
 ## Running the generated project
@@ -66,6 +68,33 @@ pinned to a commit SHA so a run is reproducible. The runner clones each once
 into `evals/.cache/plugins/` (gitignored) and loads it with `--plugin-dir`. A
 repo with skills but no plugin manifest gets a minimal one. To move a pin, update
 the SHA and re-run that sample.
+
+## Harvest samples
+
+A harvest sample runs `/forge:harvest` alone, on a git repo the runner builds:
+`seed/` is committed on `main`, then `branch/` is laid over it and committed on
+the branch `harness.branch` names (`seedFrom` borrows another sample's seed).
+The seed's `.forge.json` points the lesson library at `lib/` inside the
+workspace, so every write is visible to the checker, and turns the lesson
+checkpoint hooks off so they can't interfere. `docs/eval/` is kept out of git.
+
+Its `expect.json` has no size class or approvals. Instead:
+
+```jsonc
+{
+  "phases": ["harvest"],
+  "harness": { "branch": { "name": "delivery-hardening", "message": "…" }, "seedFrom": "other-sample" },
+  "expect": {
+    "library": {
+      "count": 2,                                            // exactly this many lessons
+      "lessons": [{ "match": "regex on the body", "id": "…", "status": "confirmed", "tags": ["skill:*"], "evidence": 2, "why": "…" }],
+      "absent": [{ "pattern": "regex no lesson body may match", "why": "…" }]
+    },
+    "unchanged": ["files that must be byte-for-byte as set up"],
+    "contains": [{ "file": ".claude/skills/*/SKILL.md", "pattern": "…", "why": "…" }]   // `*` matches one path segment
+  }
+}
+```
 
 ## How a sample is built
 
