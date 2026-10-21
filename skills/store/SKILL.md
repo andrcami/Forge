@@ -23,6 +23,7 @@ no library configured, run `/forge:setup`.
 ```bash
 forge lessons list [--tag <t>]... [--any-tag <t>]... [--status <s>]... [--json]
 forge lessons read <id> [--json]
+forge lessons check <file.md>
 forge lessons write <file.md>
 forge lessons retire <id> --reason "<why>"
 forge store info [--json]
@@ -34,6 +35,9 @@ forge store init --local [--path <dir>] [--import <dir>] [--force]
   matches a namespace: `--any-tag 'stack:*' --any-tag 'arch:*'`. Quote patterns
   with `*` so the shell does not expand them.
 - `list` sorts `confirmed`, then `observed`, then `retired`.
+- `check` validates a lesson file and prints style warnings (Simplified Technical
+  English, `references/writing/ste.md`) without writing anything. `write` prints
+  the same warnings; neither blocks on them.
 - `write` takes a lesson file — frontmatter plus body, the same format as the
   library's files. Write it to a temp file first; the CLI validates it before the
   library is touched and prints what happened: `added`, `promoted`, or `updated`.

@@ -1,7 +1,7 @@
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { isAbsolute, join } from 'node:path'
 import matter from 'gray-matter'
-import { parseLesson, type Lesson } from '../../src/lesson.js'
+import { parseLesson, styleWarnings, type Lesson } from '../../src/lesson.js'
 
 /** An external plugin a sample runs with, pinned so a run is reproducible. */
 export interface PluginPin {
@@ -84,6 +84,8 @@ export interface HarvestExpectation {
       lessons?: LibraryLesson[]
       /** no lesson body may match */
       absent?: Array<{ pattern: string; why: string }>
+      /** every lesson passes the Simplified Technical English lint (`forge lessons check`) */
+      style?: boolean
     }
     /** files that must be byte-for-byte as the runner set them up */
     unchanged?: string[]
@@ -385,6 +387,9 @@ async function checkHarvest(dir: string, exp: HarvestExpectation, fail: Fail): P
     if (w.evidence !== undefined && l.evidence.length !== w.evidence) {
       fail('library', `${l.id} has ${l.evidence.length} evidence entries, expected ${w.evidence} — ${w.why}`)
     }
+  }
+  if (want.style) {
+    for (const l of lessons) for (const w of styleWarnings(l.body)) fail('library.style', `${l.id}: ${w}`)
   }
   for (const a of want.absent ?? []) {
     for (const l of lessons) if (new RegExp(a.pattern, 'i').test(l.body)) fail('library', `${l.id} matches /${a.pattern}/ — ${a.why}`)

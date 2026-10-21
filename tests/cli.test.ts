@@ -73,6 +73,27 @@ describe('forge lessons — local backend', () => {
     expect(stored.evidence).toHaveLength(2)
   })
 
+  it('check lints a lesson without writing it, and needs no library', async () => {
+    const wordy = lesson({ body: 'It is important that every outbound HTTP client has a timeout, because a hung consumer otherwise blocks a worker for hours.' })
+    expect(await run('lessons', 'check', await lessonFile('w.md', wordy))).toBe(0)
+    expect(out.pop()).toBe('cli-lesson: valid, 2 style warning(s)')
+    expect(err.join('\n')).toMatch(/style: the rule \(first sentence\) has 21 words/)
+    expect(err.join('\n')).toMatch(/style: the rule should start with a command verb/)
+    expect(await run('lessons', 'list')).toBe(0)
+    expect(out.pop() ?? '').not.toMatch(/cli-lesson/)
+
+    err = []
+    expect(await run('lessons', 'check', await lessonFile('ok.md', lesson({ body: 'Set a timeout on every outbound HTTP client.' })))).toBe(0)
+    expect(out.pop()).toBe('cli-lesson: valid')
+    expect(err).toEqual([])
+  })
+
+  it('write prints style warnings but still writes', async () => {
+    expect(await run('lessons', 'write', await lessonFile('w.md', lesson({ body: 'The client needs a timeout.' })))).toBe(0)
+    expect(err.join()).toMatch(/style: the rule should start with a command verb/)
+    expect(out.pop()).toBe('added cli-lesson as observed')
+  })
+
   it('refuses a project-scoped lesson and reports why', async () => {
     expect(await run('lessons', 'write', await lessonFile('p.md', lesson({ scope: 'project' })))).toBe(1)
     expect(err.pop()).toMatch(/refusing to store a project-scoped lesson/)

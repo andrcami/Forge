@@ -88,7 +88,8 @@ Its `expect.json` has no size class or approvals. Instead:
     "library": {
       "count": 2,                                            // exactly this many lessons
       "lessons": [{ "match": "regex on the body", "id": "…", "status": "confirmed", "tags": ["skill:*"], "evidence": 2, "why": "…" }],
-      "absent": [{ "pattern": "regex no lesson body may match", "why": "…" }]
+      "absent": [{ "pattern": "regex no lesson body may match", "why": "…" }],
+      "style": true                                          // every lesson passes `forge lessons check`
     },
     "unchanged": ["files that must be byte-for-byte as set up"],
     "contains": [{ "file": ".claude/skills/*/SKILL.md", "pattern": "…", "why": "…" }]   // `*` matches one path segment

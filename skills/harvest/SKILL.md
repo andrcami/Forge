@@ -38,6 +38,17 @@ Ambiguous defaults to **project**.
 Remove skill lines describing a state that has since closed. A stale line is
 worse than no line.
 
+## How to write it
+
+Everything this pass writes or proposes follows Simplified Technical English:
+library lessons, `## Lessons` lines, and the candidate list you show for
+approval. Read `references/writing/ste.md` before you write. In short: the rule
+comes first and starts with a command verb; rules have 20 words or fewer,
+evidence sentences 25; active voice; one name for one thing.
+
+This applies to the written text only. Talk to the user in whatever style the
+session uses (terse or caveman mode is fine); quote lesson text unchanged.
+
 ## Writing to the library
 
 Portable candidates are **shown for approval before write, never written
@@ -49,8 +60,10 @@ appends evidence and promotes it to `confirmed` — the second independent sight
 is what earns rule status. Check for a match first with `forge lessons list`, so
 the proposal can say "this confirms <id>".
 
-On approval, write each lesson to a temp file and run `forge lessons write <file>`
-(the `store` skill has the file format and where the CLI is). Report the CLI's
+Before you propose a library lesson, write it to a temp file and run
+`forge lessons check <file>`. Fix any style warning, then show it. On approval,
+run `forge lessons write <file>` (the `store` skill has the file format and where
+the CLI is). Report the CLI's
 output line — `added`, `promoted`, or `updated` — and stop on a non-zero exit:
 an unpushed lesson is the one failure the store exists to prevent.
 

@@ -7,6 +7,7 @@
   "expect": {
     "library": {
       "count": 2,
+      "style": true,
       "lessons": [
         {
           "match": "raw\\s+(request\\s+)?(body|bodies|bytes)|exact\\s+bytes",
