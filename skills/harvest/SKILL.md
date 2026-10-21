@@ -54,6 +54,15 @@ On approval, write each lesson to a temp file and run `forge lessons write <file
 output line — `added`, `promoted`, or `updated` — and stop on a non-zero exit:
 an unpushed lesson is the one failure the store exists to prevent.
 
+## Checkpoints
+
+Hooks also ask for a short harvest on their own: every few turns, before a
+commit, after a compaction, and — as this full pass — before a pull request
+(`lessonCheckpoints` in the Forge config sets which). Treat each as this pass
+over the work since the last checkpoint: same four questions, same approval
+before any write. When nothing qualifies, carry on without mentioning it — a
+checkpoint that always talks gets ignored.
+
 ## Rules
 
 - Harvest runs before the PR, not after. A lesson deferred is a lesson lost.

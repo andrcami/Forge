@@ -63,6 +63,31 @@ Lessons carry two independent classifications:
 something proposes re-adding them — which is how the library records what does
 **not** work.
 
+### Lesson checkpoints
+
+You don't have to remember to ask Forge to learn. Once a library is configured,
+hooks ask Claude to look back for lessons — corrections, mistakes it fixed,
+surprising tool behaviour, rules you stated — at four moments:
+
+| When | What happens |
+|---|---|
+| every 5 turns | Claude reviews the turns since the last checkpoint before it stops |
+| before a `git commit` | the commit is held once; Claude reviews that work, then commits |
+| before a pull request | PR creation (`gh pr create` or the GitHub tool) is held once for a harvest of the branch |
+| after compaction | Claude reads the summary for anything not yet captured |
+
+Every checkpoint only proposes: nothing is written without your approval, and
+Claude says nothing when there is nothing to propose. Only commits and PRs Claude
+makes are seen; your own terminal commits are not.
+
+Tune them in `~/.claude/forge/config.json` (or a project's `.forge.json`):
+
+```json
+"lessonCheckpoints": { "every": 5, "commit": true, "pr": true, "compact": true }
+```
+
+`"every": 0` turns off the turn count; `"lessonCheckpoints": false` turns off all four.
+
 ## Install
 
 This repo is its own single-plugin marketplace, so you add it once as a
