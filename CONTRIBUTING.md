@@ -36,6 +36,10 @@ This uses your own Claude Code session, which counts against your plan's usage.
   private repo. Never include lesson files, client or project names, or
   findings from real codebases in code, docs, tests, or examples. Use invented
   examples.
+  The one kind of lesson file allowed is an invented one inside an eval
+  sample's fixtures (`evals/projects/*/seed/lib/`), where a harvest sample
+  needs a library that already holds a lesson. It must be made up like the
+  rest of the sample: no real project, PR, or finding behind it.
 - **Skills stay thin.** Generic know-how goes in `references/`, linked from a
   skill rather than copied into it.
 - **Bump the version** in `.claude-plugin/plugin.json` when installed copies need
