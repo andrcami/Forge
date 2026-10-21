@@ -70,6 +70,19 @@ one reading. Chat is not affected: talk as tersely as you like (caveman mode
 pairs well), and only what a harvest writes follows STE. `forge lessons check
 <file>` lints a lesson before it is written.
 
+### Chat style
+
+Forge offers [caveman](https://github.com/JuliusBrussee/caveman) mode for chat,
+once: terse answers, while code, commits, PRs, and lessons stay normal. On a yes
+it installs caveman's Claude Code plugin from its author's marketplace; nothing
+is installed without one. The answer is recorded, so Forge never asks again.
+
+```bash
+forge chat-style                          # what is chosen and installed
+forge chat-style caveman --level lite     # on by default, lite level (a marked line in ~/.claude/CLAUDE.md)
+forge chat-style normal                   # no caveman; removes that line
+```
+
 ### Lesson checkpoints
 
 You don't have to remember to ask Forge to learn. Once a library is configured,

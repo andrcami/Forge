@@ -26,5 +26,14 @@ elif [ ! -f "$HOME/.claude/forge/config.json" ]; then
   missing="${missing:+$missing and }lesson library"
 fi
 
-[ -z "$missing" ] && exit 0
-echo "Forge is installed but its $missing is not set up on this machine. If the user starts Forge work (/forge:scope, /forge:harvest, lessons), suggest /forge:setup once first. Do not run it unprompted."
+if [ -n "$missing" ]; then
+  echo "Forge is installed but its $missing is not set up on this machine. If the user starts Forge work (/forge:scope, /forge:harvest, lessons), suggest /forge:setup once first. Do not run it unprompted."
+  exit 0
+fi
+
+# Chat style: offer caveman once, until the user has answered. Silent when the
+# caveman plugin is already enabled or the answer is recorded, and in eval runs.
+[ -n "$FORGE_EVAL" ] && exit 0
+grep -q '"chatStyle"' "$HOME/.claude/forge/preferences.json" 2>/dev/null && exit 0
+grep -q '"caveman@[^"]*"[[:space:]]*:[[:space:]]*true' "$HOME/.claude/settings.json" 2>/dev/null && exit 0
+echo "Forge has not asked this user about chat style yet. Once, at a natural pause, ask whether they want caveman mode for chat: terse answers, while code, commits, PRs, and Forge lessons stay normal. Follow the 'Chat style' step of the Forge setup skill. Install nothing without an explicit yes. Record the answer either way with \`forge chat-style caveman\` or \`forge chat-style normal\`, so Forge does not ask again."

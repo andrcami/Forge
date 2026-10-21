@@ -13,6 +13,7 @@
  *   forge store init --repo <owner/name|git-url> --path <dir> [--create] [--import <dir>] [--force]
  *   forge store init --local [--path <dir>] [--import <dir>] [--force]
  *   forge store init --project [--repo … --path …]   (this project's .forge.json; clones what it names)
+ *   forge chat-style [caveman|normal] [--level lite|full] [--json]
  *
  * Tags may end in `*` to match a namespace: `--any-tag 'stack:*'`.
  */
@@ -25,6 +26,7 @@ import { resolveConfig, PROJECT_FILE } from './config.js'
 import { parseLesson, serializeLesson, styleWarnings, type Lesson, type LessonStatus } from './lesson.js'
 import { createStore } from './store/index.js'
 import { initStore } from './setup.js'
+import { chatStyleStatus, describe, setChatStyle, type ChatStyle, type Level } from './chatstyle.js'
 
 export interface CliIO {
   home: string
@@ -50,13 +52,14 @@ const USAGE = `usage:
   forge store init --repo <owner/name|git-url> --path <dir> [--create] [--import <dir>] [--force]
   forge store init --local [--path <dir>] [--import <dir>] [--force]
   forge store init --project [--repo <owner/name|git-url> --path <dir>] [--create] [--force]
+  forge chat-style [caveman|normal] [--level lite|full] [--json]
 
 --tag must all match; --any-tag needs one match; a trailing * matches a prefix.`
 
 interface Args { positional: string[]; flags: Map<string, string[]>; bools: Set<string> }
 
 function parseArgs(argv: string[]): Args {
-  const valued = new Set(['--tag', '--any-tag', '--status', '--reason', '--repo', '--path', '--import'])
+  const valued = new Set(['--tag', '--any-tag', '--status', '--reason', '--repo', '--path', '--import', '--level'])
   const out: Args = { positional: [], flags: new Map(), bools: new Set() }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -91,6 +94,20 @@ function summary(l: Lesson): string {
 
 export async function main(argv: string[], io: CliIO): Promise<number> {
   try {
+    // `chat-style` takes its choice where other groups take a subcommand
+    if (argv[0] === 'chat-style') {
+      const args = parseArgs(argv.slice(1))
+      const style = args.positional[0]
+      const level = args.flags.get('--level')?.[0]
+      if (style && style !== 'caveman' && style !== 'normal') throw new UsageError(`chat-style is caveman or normal, not ${style}`)
+      if (level && level !== 'lite' && level !== 'full') throw new UsageError(`--level is lite or full, not ${level}`)
+      if (level && style !== 'caveman') throw new UsageError('--level goes with chat-style caveman')
+      if (style) for (const line of await setChatStyle(io.home, style as ChatStyle, level as Level | undefined)) io.out(line)
+      const status = await chatStyleStatus(io.home)
+      io.out(args.bools.has('--json') ? JSON.stringify(status, null, 2) : describe(status).join('\n'))
+      return 0
+    }
+
     const [group, cmd, ...rest] = argv
     const args = parseArgs(rest)
     const json = args.bools.has('--json')
