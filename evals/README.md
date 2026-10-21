@@ -36,7 +36,7 @@ samples a change touches to keep that usage small.
 | `clinic-booking` | product | app + marketing | Full design with both surfaces, tenancy, EU residency, double-booking invariant, product-scale `qa` (WebKit, visual, keyboard) |
 | `realtime-contradiction` | product | app | A self-contradicting scope: architecture escalates to scope, and design and build refuse |
 | `studio-membership` | tool | app + marketing | Runs **with the design skills installed**: ui-ux-pro-max leads the app, taste-skill the public page, design-motion-principles the motion. Its generated e2e suite is run too |
-| `harvest-lessons` | — | — | `/forge:harvest` on a branch with real lessons: a new portable lesson enters `observed` with a `skill:` tag, a second sighting promotes an existing lesson, a schema detail stays in the project skill, a rejected candidate is written nowhere, a closed gap is pruned |
+| `harvest-lessons` | — | — | `/forge:harvest` on a branch with real lessons: a new portable lesson enters `observed` with a `skill:` tag, a second sighting promotes an existing lesson, a schema detail stays in the project skill, a rejected candidate is written nowhere, a rule whose reason the branch closed is pruned |
 | `harvest-quiet` | — | — | `/forge:harvest` on a branch with nothing to learn: the library and the skills stay byte-for-byte as they were |
 
 Together they cover every size class, UI and no UI, both design surfaces, the

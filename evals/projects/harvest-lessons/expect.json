@@ -33,7 +33,7 @@
       { "file": ".claude/skills/*/SKILL.md", "pattern": "1-based|one-based|starts at 1|0-based|zero-based", "why": "the project-specific lesson lands in the owning skill's ## Lessons" }
     ],
     "notContains": [
-      { "file": ".claude/skills/*/SKILL.md", "pattern": "not indexed yet", "why": "harvest prunes a skill line describing a state the branch closed" },
+      { "file": ".claude/skills/*/SKILL.md", "pattern": "has no index", "why": "harvest prunes a skill rule whose reason the branch closed (the index now exists)" },
       { "file": ".claude/skills/*/SKILL.md", "pattern": "http\\.Client", "why": "the user rejected the http.Client lesson everywhere" },
       { "file": ".claude/skills/*/SKILL.md", "pattern": "typo|recieve", "why": "branch trivia is not a lesson" }
     ]
