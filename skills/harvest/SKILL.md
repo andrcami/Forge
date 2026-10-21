@@ -56,11 +56,12 @@ an unpushed lesson is the one failure the store exists to prevent.
 
 ## Checkpoints
 
-A Stop hook also asks for a short harvest every few turns (`lessonCheckpointEvery`
-in the Forge config, default 5, `0` off). Treat it as this pass over the turns
-since the last checkpoint: same four questions, same approval before any write.
-When nothing qualifies, stop without mentioning it — a checkpoint that always
-talks gets ignored.
+Hooks also ask for a short harvest on their own: every few turns, before a
+commit, after a compaction, and — as this full pass — before a pull request
+(`lessonCheckpoints` in the Forge config sets which). Treat each as this pass
+over the work since the last checkpoint: same four questions, same approval
+before any write. When nothing qualifies, carry on without mentioning it — a
+checkpoint that always talks gets ignored.
 
 ## Rules
 
