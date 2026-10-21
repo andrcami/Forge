@@ -176,9 +176,21 @@ describe('session-start check', () => {
     expect(said).toMatch(/Do not run it unprompted/)
   })
 
-  it('is silent once configured', async () => {
+  it('once configured, offers caveman until the user answers, then is silent', async () => {
     await mkdir(join(home, '.claude/forge'), { recursive: true })
     await writeFile(join(home, '.claude/forge/config.json'), '{"store":{"backend":"local","path":"/x"}}')
+    const said = await runHook(home)
+    expect(said).toMatch(/has not asked this user about chat style/)
+    expect(said).toMatch(/Install nothing without an explicit yes/)
+    expect(said).toMatch(/forge chat-style normal/)
+    await writeFile(join(home, '.claude/forge/preferences.json'), '{"chatStyle":"normal"}')
+    expect(await runHook(home)).toBe('')
+  })
+
+  it('does not offer caveman when its plugin is already enabled', async () => {
+    await mkdir(join(home, '.claude/forge'), { recursive: true })
+    await writeFile(join(home, '.claude/forge/config.json'), '{"store":{"backend":"local","path":"/x"}}')
+    await writeFile(join(home, '.claude/settings.json'), '{"enabledPlugins": {"caveman@caveman": true}}')
     expect(await runHook(home)).toBe('')
   })
 })
@@ -249,6 +261,8 @@ describe('per-project library', () => {
       { cwd: project, env: { ...process.env, HOME: home, PWD: project } }, (e, o) => e ? rej(e) : res(o)))
     expect(await say()).toMatch(/lesson library for this project .*not cloned at .*work-clone/)
     await mkdir(join(home, 'work-clone'))
+    await mkdir(join(home, '.claude/forge'), { recursive: true })
+    await writeFile(join(home, '.claude/forge/preferences.json'), '{"chatStyle":"caveman"}')
     expect(await say()).toBe('')
   })
 })

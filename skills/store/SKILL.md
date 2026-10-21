@@ -27,6 +27,7 @@ forge lessons check <file.md>
 forge lessons write <file.md>
 forge lessons retire <id> --reason "<why>"
 forge store info [--json]
+forge chat-style [caveman|normal] [--level lite|full] [--json]
 forge store init --repo <owner/name|git-url> --path <dir> [--create] [--import <dir>] [--force]
 forge store init --local [--path <dir>] [--import <dir>] [--force]
 ```

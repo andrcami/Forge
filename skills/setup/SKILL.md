@@ -98,3 +98,38 @@ git.
 
 Run `forge lessons list` and report the count. Suggest saving the repo and path
 in the plugin settings (`/config`), so the next machine's setup is prefilled.
+
+## 8. Chat style
+
+Run `forge chat-style`. It shows whether the user chose a style, and whether
+caveman is installed. If a choice is recorded, stop here.
+
+Ask once: "Do you want caveman mode for chat? Answers get terse. Code, commits,
+PRs, and Forge lessons stay normal." Then act on the answer.
+
+- **No:** run `forge chat-style normal`. Forge does not ask again.
+- **Yes, and the caveman plugin is not installed:** say what will happen.
+  "I'll install the caveman plugin from its author's marketplace,
+  `JuliusBrussee/caveman`. It is third-party code. It starts in every session."
+  Install only after an explicit yes:
+
+  ```bash
+  claude plugin marketplace add JuliusBrussee/caveman && claude plugin install caveman@caveman
+  ```
+
+  Do not use caveman's `npx` installer. It also changes other agents and how
+  requests are sent. If the user is at work, ask whether third-party plugins are
+  allowed before you install.
+- **Yes, and the plugin is installed or enabled:** nothing to install.
+
+Then ask for the level. **Full** is the plugin's default. **Lite** keeps full
+sentences, so it reads more like normal text.
+
+- **Full:** run `forge chat-style caveman`.
+- **Lite**, or only the caveman skill is available (no plugin): run
+  `forge chat-style caveman --level lite` (or `--level full`). This adds one
+  marked line to `~/.claude/CLAUDE.md`, so caveman starts by default.
+  `forge chat-style normal` removes the line.
+
+Tell the user that the change takes effect in a new session. In chat, they can
+say "stop caveman" at any time.
