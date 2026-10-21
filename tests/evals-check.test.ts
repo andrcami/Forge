@@ -4,7 +4,10 @@ import { tmpdir } from 'node:os'
 import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import matter from 'gray-matter'
-import { checkProject, validateExpectation, type Expectation } from '../evals/src/check.js'
+import {
+  checkProject, isHarvest, validateExpectation, type Expectation, type HarvestExpectation, type PhaseExpectation,
+} from '../evals/src/check.js'
+import { serializeLesson, type Lesson } from '../src/lesson.js'
 
 const FORGE = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -20,7 +23,7 @@ async function put(rel: string, body: string) {
 const skill = (name: string, extra = '') =>
   `---\nname: ${name}\ndescription: ${name} standard for the test project.\n---\n\n# ${name}\n\n${extra}\n\n## Lessons\n`
 
-const apiTool: Expectation = {
+const apiTool: PhaseExpectation = {
   description: 'api tool',
   phases: ['scope', 'architect', 'design', 'build'],
   expect: {
@@ -134,7 +137,7 @@ describe('checkProject', () => {
 
   it('requires Playwright when a non-throwaway project has UI', async () => {
     await goodApiWorkspace()
-    const ui: Expectation = { ...apiTool, expect: { ...apiTool.expect, hasUI: true, skills: {}, contains: [] } }
+    const ui: PhaseExpectation = { ...apiTool, expect: { ...apiTool.expect, hasUI: true, skills: {}, contains: [] } }
     await put('docs/forge/state.json', JSON.stringify({
       sizeClass: 'tool', hasUI: true, escalation: null,
       approvals: { scope: '2026-10-14T10:00:00Z', architecture: '2026-10-14T11:00:00Z' },
@@ -199,6 +202,91 @@ describe('checkProject', () => {
   })
 })
 
+describe('checkProject — harvest', () => {
+  const harvest: HarvestExpectation = {
+    description: 'harvest', phases: ['harvest'],
+    harness: { branch: { name: 'b', message: 'm' } },
+    expect: {
+      library: {
+        count: 2,
+        lessons: [
+          { match: 'raw body', status: 'observed', tags: ['skill:*'], evidence: 1, why: 'new lesson' },
+          { id: 'busy', match: 'busy', status: 'confirmed', evidence: 2, why: 'second sighting' },
+        ],
+        absent: [{ pattern: 'typo', why: 'trivia' }],
+      },
+      unchanged: ['CLAUDE.md'],
+      contains: [{ file: '.claude/skills/*/SKILL.md', pattern: '1-based', why: 'project lesson' }],
+      notContains: [{ file: '.claude/skills/*/SKILL.md', pattern: 'not indexed yet', why: 'pruned' }],
+    },
+  }
+  const ev = (ref: string) => ({ project: 'p', ref, date: '2026-10-01' })
+  const lesson = (id: string, body: string, over: Partial<Lesson> = {}): string => serializeLesson({
+    id, scope: 'portable', status: 'observed', tags: ['stack:any', 'skill:backend'],
+    evidence: [ev('PR #1')], retired_reason: null, body, ...over,
+  })
+
+  async function goodHarvest() {
+    await put('.forge.json', JSON.stringify({ store: { backend: 'local', path: 'lib' } }))
+    await put('lib/raw.md', lesson('raw', 'Verify signatures over the raw body.'))
+    await put('lib/busy.md', lesson('busy', 'Set a busy timeout.', { status: 'confirmed', evidence: [ev('PR #1'), ev('PR #2')] }))
+    await put('.claude/skills/database/SKILL.md', skill('database', '- attempt is 1-based'))
+    await put('.claude/skills/backend/SKILL.md', skill('backend'))
+    await put('CLAUDE.md', 'index')
+    await put('docs/eval/snapshot.json', JSON.stringify({ 'CLAUDE.md': 'index' }))
+  }
+
+  it('passes a harvest that did what it should', async () => {
+    await goodHarvest()
+    expect(await checkProject(dir, harvest, FORGE)).toEqual([])
+  })
+
+  it('catches a second sighting written as a new lesson instead of promoting the old one', async () => {
+    await goodHarvest()
+    await put('lib/busy.md', lesson('busy', 'Set a busy timeout.'))
+    await put('lib/busy-again.md', lesson('busy-again', 'SQLite needs a busy timeout.', { evidence: [ev('PR #2')] }))
+    const msgs = (await checkProject(dir, harvest, FORGE)).map(f => f.message)
+    expect(msgs.some(m => /expected 2 lessons, found 3/.test(m))).toBe(true)
+    expect(msgs.some(m => /busy is observed, expected confirmed/.test(m))).toBe(true)
+    expect(msgs.some(m => /busy has 1 evidence entries, expected 2/.test(m))).toBe(true)
+  })
+
+  it('catches a missing lesson, a missing skill tag, an unapproved lesson, and an invalid file', async () => {
+    await goodHarvest()
+    await put('lib/raw.md', lesson('raw', 'Verify signatures over the raw body.', { tags: ['stack:any'] }))
+    await put('lib/busy.md', lesson('busy', 'Fixed a typo. busy', { status: 'confirmed', evidence: [ev('a'), ev('b')] }))
+    await put('lib/broken.md', '---\nid: Not Kebab\n---\nx')
+    const msgs = (await checkProject(dir, harvest, FORGE)).map(f => f.message)
+    expect(msgs.some(m => /raw lacks tag skill:\*/.test(m))).toBe(true)
+    expect(msgs.some(m => /busy matches \/typo\//.test(m))).toBe(true)
+    expect(msgs.some(m => /broken\.md is not a valid lesson/.test(m))).toBe(true)
+    await rm(join(dir, 'lib/raw.md'))
+    expect((await checkProject(dir, harvest, FORGE)).some(f => /no lesson matching \/raw body\//.test(f.message))).toBe(true)
+  })
+
+  it('checks content across a skills glob, and files that must stay unchanged', async () => {
+    await goodHarvest()
+    await put('.claude/skills/database/SKILL.md', skill('database', '- deliveries.status is not indexed yet'))
+    await put('CLAUDE.md', 'index, edited')
+    const f = await checkProject(dir, harvest, FORGE)
+    expect(f.some(x => x.check === 'contains' && /\*\/SKILL\.md lacks \/1-based\//.test(x.message))).toBe(true)
+    expect(f.some(x => x.check === 'notContains' && x.message.startsWith('.claude/skills/database/SKILL.md has'))).toBe(true)
+    expect(f.some(x => x.check === 'unchanged' && /CLAUDE\.md was changed/.test(x.message))).toBe(true)
+  })
+
+  it('reports a workspace without a library as a harness problem', async () => {
+    expect((await checkProject(dir, harvest, FORGE)).map(f => f.check)).toContain('harness')
+  })
+
+  it('validates a harvest expectation', () => {
+    expect(validateExpectation(harvest)).toEqual([])
+    expect(validateExpectation({ ...harvest, harness: {} }).join()).toMatch(/harness.branch needs name and message/)
+    expect(validateExpectation({ ...harvest, phases: ['harvest', 'scope'] }).join()).toMatch(/runs harvest alone/)
+    const noLib = { ...harvest, expect: { ...harvest.expect, library: undefined } }
+    expect(validateExpectation(noLib).join()).toMatch(/expect.library missing/)
+  })
+})
+
 describe('sample projects', async () => {
   const root = join(FORGE, 'evals', 'projects')
   const names = (await readdir(root, { withFileTypes: true })).filter(e => e.isDirectory()).map(e => e.name)
@@ -221,14 +309,19 @@ describe('sample projects', async () => {
     })
   }
 
-  it('together cover every size class, UI and no-UI, an escalation, and a run with external design skills', async () => {
-    const all: Expectation[] = await Promise.all(names.map(async n =>
+  it('together cover every size class, UI and no-UI, an escalation, a run with external design skills, and the harvest', async () => {
+    const every: Expectation[] = await Promise.all(names.map(async n =>
       JSON.parse(await readFile(join(root, n, 'expect.json'), 'utf8'))))
+    const all = every.filter((e): e is PhaseExpectation => !isHarvest(e))
     const classes = new Set(all.map(e => e.expect.sizeClass))
     expect([...classes].sort()).toEqual(['product', 'throwaway', 'tool'])
     expect(all.some(e => e.expect.hasUI)).toBe(true)
     expect(all.some(e => !e.expect.hasUI && e.expect.sizeClass !== 'throwaway')).toBe(true)
     expect(all.some(e => e.expect.escalation)).toBe(true)
     expect(all.some(e => e.harness?.plugins?.length)).toBe(true)
+    // the harvest: one that has lessons to fold in, one that has none
+    const harvests = every.filter(isHarvest)
+    expect(harvests.some(e => e.expect.library.lessons?.some(l => l.status === 'confirmed'))).toBe(true)
+    expect(harvests.some(e => e.expect.unchanged?.length)).toBe(true)
   })
 })
