@@ -63,6 +63,17 @@ Lessons carry two independent classifications:
 something proposes re-adding them — which is how the library records what does
 **not** work.
 
+### Lesson checkpoints
+
+You don't have to remember to ask Forge to learn. Once a library is configured,
+a Stop hook asks Claude every 5 turns to look back over the conversation —
+corrections, mistakes it fixed, surprising tool behaviour, rules you stated — and
+propose any lessons worth keeping. It still writes nothing without your approval,
+and says nothing when there is nothing to propose.
+
+Change the interval with `lessonCheckpointEvery` in `~/.claude/forge/config.json`
+(or a project's `.forge.json`); `0` turns checkpoints off.
+
 ## Install
 
 This repo is its own single-plugin marketplace:
