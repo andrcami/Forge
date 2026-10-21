@@ -7,6 +7,7 @@
   "expect": {
     "library": {
       "count": 2,
+      "style": true,
       "lessons": [
         {
           "match": "raw\\s+(request\\s+)?(body|bodies|bytes)|exact\\s+bytes",
@@ -30,7 +31,7 @@
       ]
     },
     "contains": [
-      { "file": ".claude/skills/*/SKILL.md", "pattern": "1-based|one-based|starts at 1|0-based|zero-based", "why": "the project-specific lesson lands in the owning skill's ## Lessons" }
+      { "file": ".claude/skills/*/SKILL.md", "pattern": "1-based|one-based|0-based|zero-based|\\bat 1\\b|default is 1", "why": "the project-specific lesson lands in the owning skill's ## Lessons" }
     ],
     "notContains": [
       { "file": ".claude/skills/*/SKILL.md", "pattern": "has no index", "why": "harvest prunes a skill rule whose reason the branch closed (the index now exists)" },

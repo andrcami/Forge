@@ -29,4 +29,6 @@ a linked reference stays current, an inlined one rots.>
 ## Lessons
 
 <!-- Filled by forge-harvest. Each line: the rule, then a one-clause source.
+     Write the rule in Simplified Technical English: a command verb first,
+     20 words or fewer, active voice (Forge's references/writing/ste.md).
      Prune stale lines in the same pass as you add new ones. -->

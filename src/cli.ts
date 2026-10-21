@@ -6,6 +6,7 @@
  *
  *   forge lessons list [--tag <t>]… [--any-tag <t>]… [--status <s>]… [--json]
  *   forge lessons read <id> [--json]
+ *   forge lessons check <file.md>
  *   forge lessons write <file.md>
  *   forge lessons retire <id> --reason "<why>"
  *   forge store info [--json]
@@ -21,7 +22,7 @@ import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { simpleGit } from 'simple-git'
 import { resolveConfig, PROJECT_FILE } from './config.js'
-import { parseLesson, serializeLesson, type Lesson, type LessonStatus } from './lesson.js'
+import { parseLesson, serializeLesson, styleWarnings, type Lesson, type LessonStatus } from './lesson.js'
 import { createStore } from './store/index.js'
 import { initStore } from './setup.js'
 
@@ -42,6 +43,7 @@ async function projectRoot(cwd: string): Promise<string> {
 const USAGE = `usage:
   forge lessons list [--tag <t>]... [--any-tag <t>]... [--status <s>]... [--json]
   forge lessons read <id> [--json]
+  forge lessons check <file.md>
   forge lessons write <file.md>
   forge lessons retire <id> --reason "<why>"
   forge store info [--json]
@@ -120,6 +122,17 @@ export async function main(argv: string[], io: CliIO): Promise<number> {
       return main(['store', 'info'], io)
     }
 
+    // a lint: needs no library
+    if (group === 'lessons' && cmd === 'check') {
+      const file = args.positional[0]
+      if (!file) throw new UsageError('lessons check needs a lesson file')
+      const lesson = parseLesson(await readFile(resolve(io.cwd, file), 'utf8'))
+      const warnings = styleWarnings(lesson.body)
+      for (const w of warnings) io.err(`style: ${w}`)
+      io.out(warnings.length ? `${lesson.id}: valid, ${warnings.length} style warning(s)` : `${lesson.id}: valid`)
+      return 0
+    }
+
     const config = await resolveConfig(io.home, io.cwd)
     const from = config.source.file ?? 'the default (no config file)'
     const cloned = config.store.backend !== 'git' || await stat(config.store.path).then(() => true, () => false)
@@ -151,6 +164,7 @@ export async function main(argv: string[], io: CliIO): Promise<number> {
       const file = args.positional[0]
       if (!file) throw new UsageError('lessons write needs a lesson file')
       const lesson = parseLesson(await readFile(resolve(io.cwd, file), 'utf8'))
+      for (const w of styleWarnings(lesson.body)) io.err(`style: ${w}`)
       const before = await store.read(lesson.id)
       await store.write(lesson)
       const after = await store.read(lesson.id)

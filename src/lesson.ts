@@ -82,3 +82,35 @@ export function validateLesson(input: unknown): Lesson {
     body: (l.body as string).trim(),
   }
 }
+
+/** Words that cannot open a command sentence. */
+const NOT_A_COMMAND = new Set([
+  'a', 'an', 'the', 'it', "it's", 'its', 'this', 'that', 'these', 'those', 'there', 'here',
+  'when', 'if', 'in', 'on', 'for', 'with', 'by', 'to', 'as', 'at', 'after', 'before', 'because',
+  'we', 'our', 'you', 'your', 'i', 'my', 'they', 'some', 'many', 'most', 'each', 'every', 'all',
+  'is', 'are', 'was', 'were', 'be', 'should', 'must', 'can', 'may', 'might', 'would', 'could',
+])
+/** Words that may come before the verb: "Always set…", "Do not…". */
+const LEADING = new Set(['always', 'never', 'only', 'do', 'not', "don't"])
+
+export const RULE_MAX_WORDS = 20
+
+/**
+ * Style warnings for a lesson body, from Simplified Technical English
+ * (references/writing/ste.md): the first sentence is the rule, so it must start
+ * with a command verb and have at most 20 words. Advisory only; never blocks a write.
+ */
+export function styleWarnings(body: string): string[] {
+  const text = body.trim().replace(/`[^`]*`/g, 'CODE')
+  const first = (text.match(/^[\s\S]*?[.!?](?=\s|$)/)?.[0] ?? text.split('\n\n')[0]).replace(/\s+/g, ' ').trim()
+  const words = first.split(' ').filter(w => /[\p{L}\p{N}]/u.test(w))
+  const warnings: string[] = []
+  if (words.length > RULE_MAX_WORDS) {
+    warnings.push(`the rule (first sentence) has ${words.length} words; keep it to ${RULE_MAX_WORDS} or fewer`)
+  }
+  const opener = words.map(w => w.toLowerCase().replace(/[^\p{L}']/gu, '')).find(w => !LEADING.has(w)) ?? ''
+  if (opener && (NOT_A_COMMAND.has(opener) || /(ing|ed)$/.test(opener) && opener.length > 4)) {
+    warnings.push(`the rule should start with a command verb ("Set…", "Verify…", "Do not…"), not "${words[0]}"`)
+  }
+  return warnings
+}

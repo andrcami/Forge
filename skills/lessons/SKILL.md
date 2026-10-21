@@ -37,7 +37,9 @@ half of the library that records what does **not** work.
 ### `import <path>`
 
 Read an existing repo's `.claude/skills/**` and propose portable candidates.
-For each: show the lesson, the proposed tags, and the proposed status. **Approve
+For each: show the lesson, the proposed tags, and the proposed status. Rewrite
+the lesson in Simplified Technical English first (`references/writing/ste.md`)
+and run `forge lessons check <file>` on it. **Approve
 per entry** — nothing is written unseen. A lesson that has demonstrably bitten
 twice may enter as `confirmed`; everything else enters `observed`. Write each
 approved entry with `forge lessons write <file>`.

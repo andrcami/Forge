@@ -44,7 +44,8 @@ const REVIEW = 'Look for lessons worth keeping: corrections the user made, mista
   'tool or provider behaviour that surprised you, and rules the user stated. Apply the harvest test to each: ' +
   'durable and general? which skill owns it? portable or project? If something qualifies, propose it — lesson ' +
   'text, scope, tags (with its skill: tag), status — and ask before writing anything. On approval, write ' +
-  'portable lessons with `forge lessons write` and project ones under `## Lessons` in the owning skill.'
+  'portable lessons with `forge lessons write` and project ones under `## Lessons` in the owning skill. ' +
+  'Write the lesson text in Simplified Technical English (the harvest skill says how); chat can stay terse.'
 
 export const messages = {
   turns: every => `Forge lesson checkpoint (automatic, every ${every === 1 ? 'turn' : `${every} turns`}). ` +

@@ -41,12 +41,17 @@ an automated test of the Forge plugin itself.
   correct outcome, not a failure; state it and stop.
 - At the build phase's terminal handoff, state which planning path you would
   take, and stop. Do not write an implementation plan.
-- Install nothing globally. Keep every file inside this directory.`
+- Install nothing globally. Keep every file inside this directory, temp files
+  included.
+- Run one command per Bash call where you can: chained commands are more
+  likely to be refused by this run's permissions.`
 
 /** What build needs to scaffold and prove a harness for the stacks the samples choose. */
 const SCAFFOLD_TOOLS = [
   'git', 'npm', 'npx', 'node', 'pnpm', 'python3', 'python', 'pip', 'uv', 'pytest',
   'go', 'cargo', 'mix', 'mkdir', 'ls', 'cat', 'touch', 'chmod',
+  // read-only commands a harvest chains with `forge`; a denied chain must not decide a run
+  'cd', 'find', 'which', 'grep', 'head', 'tail', 'sed', 'diff', 'wc', 'echo', 'test',
 ].map(c => `Bash(${c}:*)`)
 
 const PHASE_PROMPT: Record<string, string> = {

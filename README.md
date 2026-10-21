@@ -63,6 +63,13 @@ Lessons carry two independent classifications:
 something proposes re-adding them — which is how the library records what does
 **not** work.
 
+Lessons are written in [Simplified Technical English](references/writing/ste.md)
+(ASD-STE100 rules): the rule first, starting with a command verb, in 20 words or
+fewer, in the active voice. They are read cold, months later, so they must have
+one reading. Chat is not affected: talk as tersely as you like (caveman mode
+pairs well), and only what a harvest writes follows STE. `forge lessons check
+<file>` lints a lesson before it is written.
+
 ### Lesson checkpoints
 
 You don't have to remember to ask Forge to learn. Once a library is configured,
