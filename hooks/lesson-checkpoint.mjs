@@ -81,6 +81,8 @@ const deny = reason => JSON.stringify({
 /** Decide for one hook event. Returns the hook's stdout ('' to stay silent). */
 export function checkpoint(input, { home = homedir(), now = Date.now() } = {}) {
   if (!input.session_id) return ''
+  // runs before every shell command: leave the rest untouched, and fast
+  if (input.hook_event_name === 'PreToolUse' && !gitAction(input.tool_name, input.tool_input)) return ''
   const s = settings(findConfig(home, input.cwd || process.cwd()))
   if (!s) return ''
 
