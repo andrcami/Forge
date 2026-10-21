@@ -67,6 +67,10 @@ the CLI is). Report the CLI's
 output line — `added`, `promoted`, or `updated` — and stop on a non-zero exit:
 an unpushed lesson is the one failure the store exists to prevent.
 
+Report only what the CLI printed. If a command was refused, failed, or did not
+run, say that the lesson was **not** written. Never report a write you did not
+see confirmed.
+
 ## Checkpoints
 
 Hooks also ask for a short harvest on their own: every few turns, before a
