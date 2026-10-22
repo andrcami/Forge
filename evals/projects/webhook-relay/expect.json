@@ -7,7 +7,7 @@
     "approvals": ["scope", "architecture"],
     "escalation": null,
     "skills": {
-      "present": ["backend", "database", "qa", "gitflow", "context-memory"],
+      "present": ["backend", "database", "qa", "security", "gitflow", "context-memory"],
       "absent": ["frontend", "design-system"]
     },
     "files": {
@@ -17,7 +17,8 @@
     "contains": [
       { "file": ".claude/skills/qa/SKILL.md", "pattern": "signature|401", "why": "the signature-rejection acceptance check must become a test" },
       { "file": ".claude/skills/qa/SKILL.md", "pattern": "idempot", "why": "the riskiest assumption (idempotent consumers) needs a guard" },
-      { "file": "docs/forge/architecture.md", "pattern": "\\bGo\\b|golang", "why": "team fluency in Go should dominate for a 3-person team" }
+      { "file": "docs/forge/architecture.md", "pattern": "\\bGo\\b|golang", "why": "team fluency in Go should dominate for a 3-person team" },
+      { "file": ".claude/skills/security/SKILL.md", "pattern": "signature", "why": "the inbound webhook is a trust boundary, and its signature check is the rule at it" }
     ],
     "notContains": [
       { "file": ".claude/skills/qa/SKILL.md", "pattern": "axe|toHaveScreenshot", "why": "no UI checks for an API-only service" }

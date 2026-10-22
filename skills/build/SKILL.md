@@ -36,12 +36,13 @@ An output of the architecture decision, not a fixed list.
 | `frontend` | UI is in scope | `ui-ux-pro-max` (stack guidelines), `design-motion-principles` |
 | `<design-system>` | UI is in scope | the visual lead(s) named in `DESIGN.md`, `design-motion-principles`, `frontend-design` |
 | `qa` | class is not `throwaway` | `superpowers:test-driven-development`, `qa-tests`, `engineering:testing-strategy`, `webapp-testing` |
+| `security` | class is not `throwaway`, and server-side code exists or the scope names accounts, payments, or personal data | `security-audit` (guidance mode per PR, full audit before a `product`'s first release), `/security-review` |
 | `devops` | deployed anywhere | — |
 | `gitflow` | always | — |
 | `context-memory` | always | — |
 | domain skills | architecture names bounded contexts | — |
 
-A Go API with no UI gets backend, database, qa, devops, gitflow, context-memory —
+A Go API with no UI gets backend, database, qa, security, devops, gitflow, context-memory —
 and no frontend anything, and a `qa` skill with no e2e or UI/UX section. Generate the design-system skill even when thin: it owns
 tokens, component inventory, and the visual rules that drift without a file to
 hold them.
@@ -92,6 +93,24 @@ The `design-system` skill's review gate and the `qa` skill's UI/UX checks are
 the same gate seen from two sides: design says what must hold, qa says how it is
 tested. Write the checks once, in `qa`, and link to them from the design-system
 skill.
+
+## Generating the security skill
+
+From `references/templates/security-skill.md`. Like `qa`, it exists before the
+code does: the architecture already names the boundaries.
+
+- **Trust boundaries** — one row per place less-trusted input enters, from the
+  architecture: auth, tenant or user data, uploads, webhooks, outbound calls
+  built from input, secrets, LLM input. Each with its rule
+- **Binding rules** — the architecture decisions with a security consequence,
+  each naming the `qa` integration test that guards it
+- **Review before the PR** — detect what is installed and wire it, per
+  `references/security/skills.md`: `security-audit` in guidance mode leads, then
+  `/security-review`, then the built-in checklist. Say which path you took. For a
+  `product`, add the full audit before the first release
+
+A static site with no server and no accounts gets no `security` skill: it has no
+boundary to hold.
 
 ## Generating the design-system skill
 

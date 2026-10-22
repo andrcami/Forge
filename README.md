@@ -13,7 +13,7 @@ employer) keeps its own private lesson repo, connected with `/forge:setup`.
 | `/forge:scope` | 1 — Scope (product) | `docs/forge/scope.md`: problem, users, first release, riskiest assumptions, surfaces, size class |
 | `/forge:architect` | 2 — Architecture | `docs/forge/architecture.md`, stack decision |
 | `/forge:design` | 3 — Design (UI only) | `DESIGN.md`, visual + motion direction, lead design skills |
-| `/forge:build` | 4 — Build | generated skills (incl. design-system, qa), test harness incl. Playwright, `docs/context/`, `CLAUDE.md` |
+| `/forge:build` | 4 — Build | generated skills (incl. design-system, qa, security), test harness incl. Playwright, `docs/context/`, `CLAUDE.md` |
 | `/forge:harvest` | ongoing | lessons folded back into skills and the library |
 | `/forge:lessons` | ongoing | import, list, retire, purge |
 
@@ -33,6 +33,20 @@ match your surfaces:
 /plugin marketplace add Leonxlnx/taste-skill                   # marketing / public pages
 /plugin install taste-skill@taste-skill
 npx skills add kylezantos/design-motion-principles             # motion create + audit
+```
+
+### Security
+
+Build generates a `security` skill for every non-throwaway project with a server
+or a trust boundary: its boundaries from the architecture, the rule at each, and
+the review that runs before a PR crosses one. It wires
+[Cloudflare's security-audit skill](https://github.com/cloudflare/security-audit-skill)
+when installed: guidance mode reviews each such PR, and a `product` gets a full
+audit before its first release. Without it, Forge falls back to `/security-review`,
+then to a built-in checklist. Details in `references/security/skills.md`.
+
+```
+npx skills add https://github.com/cloudflare/security-audit-skill --skill security-audit --global
 ```
 
 ### QA
