@@ -305,7 +305,7 @@ async function checkPhases(dir: string, exp: PhaseExpectation, forgeRoot: string
     }
 
     // generated skills are well-formed
-    const skillTpls = await Promise.all(['skill.md', 'qa-skill.md', 'design-system-skill.md'].map(tpl))
+    const skillTpls = await Promise.all(['skill.md', 'qa-skill.md', 'design-system-skill.md', 'security-skill.md'].map(tpl))
     const skillPlaceholders = new Set(skillTpls.flatMap(placeholders))
     for (const s of skills) {
       const body = await readIf(join(dir, '.claude', 'skills', s, 'SKILL.md'))

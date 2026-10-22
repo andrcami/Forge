@@ -116,7 +116,7 @@ describe('checkProject', () => {
   })
 
   it('accepts every Forge template once filled, frontmatter included', async () => {
-    for (const t of ['skill.md', 'qa-skill.md', 'design-system-skill.md', 'gitflow-skill.md']) {
+    for (const t of ['skill.md', 'qa-skill.md', 'design-system-skill.md', 'gitflow-skill.md', 'security-skill.md']) {
       const body = await readFile(join(FORGE, 'references/templates', t), 'utf8')
       // a skill name is a slug; every other placeholder gets a colon-space, the YAML trap
       const filled = body.replace(/^name: <[^>]+>$/m, 'name: x').replace(/<[^<>\n]+>/g, 'x: y')

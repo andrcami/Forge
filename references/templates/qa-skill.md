@@ -54,6 +54,8 @@ outside it never runs and stays green.
 2. New or changed flows have their e2e spec; the map above is current
 3. Visual baseline changes are intended, and the PR shows them
 4. <Wired review skills, each with its fallback — see Build's optional skills>
+5. <When a `security` skill exists: a PR that touches a trust boundary gets its
+   focused security review — see that skill>
 
 ## Reference
 
