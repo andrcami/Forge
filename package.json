@@ -28,13 +28,13 @@
   "homepage": "https://github.com/andrcami/Forge#readme",
   "private": "true",
   "devDependencies": {
-    "@types/node": "^26.4.0",
+    "@types/node": "^26.6.6",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.1.0"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",
-    "simple-git": "^3.36.0",
+    "simple-git": "^4.0.2",
     "tsx": "^4.23.15"
   },
   "bin": {
