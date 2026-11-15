@@ -98,6 +98,30 @@ describe('GitStore', () => {
     expect((await store.read('git-lesson'))?.status).toBe('retired')
   })
 
+  it('merge removes the folded files and commits the whole change at once', async () => {
+    const store = new GitStore(workDir, 'lessons', remoteDir)
+    await store.write(lesson({ id: 'one' }))
+    await store.write(lesson({ id: 'two', evidence: [{ project: 'other', ref: 'PR #5', date: '2026-09-01' }] }))
+    await store.merge(lesson({ id: 'one', evidence: [] }), ['one', 'two'])
+
+    const w = simpleGit(workDir)
+    expect((await w.log()).latest?.message).toBe('lessons: merge into one (merged two)')
+    const files = (await w.raw(['show', '--name-status', '--format=', 'HEAD'])).trim().split('\n').sort()
+    expect(files).toEqual(['D\tlessons/two.md', 'M\tlessons/one.md'])
+    expect((await w.status()).isClean()).toBe(true)
+    expect((await w.raw(['rev-parse', 'HEAD'])).trim()).toBe((await w.raw(['rev-parse', 'origin/main'])).trim())
+  })
+
+  it('retag commits every changed lesson in one commit', async () => {
+    const store = new GitStore(workDir, 'lessons')
+    await store.write(lesson({ id: 'one', tags: ['stack:ts', 'skill:backend'] }))
+    await store.write(lesson({ id: 'two', tags: ['stack:ts', 'skill:frontend'] }))
+    expect(await store.retag('stack:ts', 'stack:typescript')).toEqual(['one', 'two'])
+    const files = (await simpleGit(workDir).raw(['show', '--name-only', '--format=', 'HEAD'])).trim().split('\n')
+    expect(files).toEqual(['lessons/one.md', 'lessons/two.md'])
+    expect((await store.read('two'))?.tags).toEqual(['stack:typescript', 'skill:frontend'])
+  })
+
   it('list delegates tag filtering to the local backend', async () => {
     const store = new GitStore(workDir, 'lessons')
     await store.write(lesson({ id: 'a', tags: ['skill:backend'] }))

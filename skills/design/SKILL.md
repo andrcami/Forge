@@ -79,8 +79,9 @@ Each direction states: the idea it is built on, the palette and type, the densit
 **where it loses**, and what assets it needs that may not exist.
 
 Load library lessons tagged `skill:design-system` or `skill:frontend` before
-recommending — `forge lessons list --any-tag skill:design-system --any-tag skill:frontend`
-(the `store` skill says where the CLI is). Say which informed the choice.
+recommending — `forge lessons list --any-tag skill:design-system --any-tag skill:frontend --stack <s>... --status confirmed --status observed`,
+with one `--stack` per front-end stack the architecture chose (the `store` skill
+says where the CLI is). Say which informed the choice.
 
 ## Step 5 — Motion
 

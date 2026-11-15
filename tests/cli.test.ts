@@ -54,6 +54,15 @@ describe('filterLessons', () => {
   it('filters by status', () => {
     expect(ids(filterLessons(ls, [], [], ['confirmed', 'observed']))).toEqual(['a', 'b'])
   })
+
+  it('--stack keeps that stack, stack:any, and lessons with no stack tag', () => {
+    const mixed = [...ls,
+      lesson({ id: 'd', tags: ['stack:python', 'skill:database'] }),
+      lesson({ id: 'e', tags: ['stack:any', 'skill:database'] })]
+    expect(ids(filterLessons(mixed, ['skill:database'], [], [], ['python']))).toEqual(['d', 'e'])
+    expect(ids(filterLessons(mixed, ['skill:database'], [], [], ['stack:go']))).toEqual(['a', 'e'])
+    expect(ids(filterLessons(mixed, [], [], [], ['rust']))).toEqual(['b', 'c', 'e'])
+  })
 })
 
 describe('forge lessons — local backend', () => {
@@ -124,6 +133,79 @@ describe('forge lessons — local backend', () => {
   })
 })
 
+describe('forge lessons — retrieval and merging', () => {
+  beforeEach(async () => {
+    await config({ backend: 'local', path: join(root, 'lib') })
+    for (const l of [
+      lesson({ id: 'http-client-timeout', tags: ['stack:any', 'skill:backend', 'domain:http'],
+        body: 'Set a timeout on every outbound HTTP client. A client with no timeout blocks a worker for hours.' }),
+      lesson({ id: 'outbound-request-timeouts', tags: ['stack:go', 'skill:backend'],
+        evidence: [{ project: 'beta', ref: 'PR #3', date: '2026-09-01' }],
+        body: 'Give each outbound HTTP request a timeout. Without a timeout, a hung upstream blocks the worker forever.' }),
+      lesson({ id: 'sqlite-busy-timeout', tags: ['stack:sqlite', 'skill:database'],
+        body: 'Set a busy timeout on every SQLite connection. Without one, a second writer fails at once.' }),
+    ]) await run('lessons', 'write', await lessonFile(`${l.id}.md`, l))
+    out = []; err = []
+  })
+
+  it('search ranks by the words a lesson holds, and honours --stack', async () => {
+    expect(await run('lessons', 'search', 'outbound', 'http', 'timeout')).toBe(0)
+    const text = out.pop()!
+    expect(text.indexOf('http-client-timeout')).toBeLessThan(text.indexOf('sqlite-busy-timeout'))
+    expect(await run('lessons', 'search', 'timeout', '--stack', 'python', '--json')).toBe(0)
+    expect(JSON.parse(out.pop()!).map((l: Lesson) => l.id)).toEqual(['http-client-timeout'])
+    expect(await run('lessons', 'search')).toBe(2)
+  })
+
+  it('tags counts each tag and flags near-duplicates', async () => {
+    await run('lessons', 'write', await lessonFile('t.md', lesson({ id: 'typo', tags: ['stack:golang', 'skill:backends'] })))
+    out = []
+    expect(await run('lessons', 'tags')).toBe(0)
+    expect(out[0]).toMatch(/^\s+2  skill:backend$/m)
+    expect(out.slice(1)).toEqual([
+      'similar tags: skill:backend and skill:backends — use one',
+      'similar tags: stack:go and stack:golang — use one',
+    ])
+  })
+
+  it('retag renames a tag everywhere, and validates the new one', async () => {
+    expect(await run('lessons', 'retag', 'skill:backend', 'skill:server')).toBe(0)
+    expect(out.pop()).toBe('retagged 2 lesson(s): http-client-timeout, outbound-request-timeouts')
+    expect(await run('lessons', 'list', '--tag', 'skill:backend')).toBe(0)
+    expect(out.pop()).toBe('no matching lessons')
+    expect(await run('lessons', 'retag', 'skill:server', 'bogus:x')).toBe(1)
+    expect(err.pop()).toMatch(/outside the known namespaces/)
+    expect(await run('lessons', 'retag', 'skill:nothing', 'skill:x')).toBe(0)
+    expect(out.pop()).toBe('no lesson carries skill:nothing')
+  })
+
+  it('similar pairs the two wordings of one rule and nothing else', async () => {
+    expect(await run('lessons', 'similar', '--json')).toBe(0)
+    expect(JSON.parse(out.pop()!).map((p: { a: string; b: string }) => [p.a, p.b])).toEqual([
+      ['http-client-timeout', 'outbound-request-timeouts'],
+    ])
+    expect(await run('lessons', 'similar', '--min', '2')).toBe(2)
+  })
+
+  it('merge folds the duplicate in, and its old id still resolves', async () => {
+    const merged = lesson({ id: 'http-client-timeout', tags: ['stack:any', 'skill:backend'], evidence: [],
+      body: 'Set a timeout on every outbound HTTP request. A request with no timeout blocks a worker when the peer hangs.' })
+    expect(await run('lessons', 'merge', await lessonFile('m.md', merged), '--from', 'outbound-request-timeouts')).toBe(0)
+    expect(out.pop()).toBe('merged into http-client-timeout (confirmed, 2 evidence), folding in outbound-request-timeouts')
+
+    expect(await run('lessons', 'read', 'outbound-request-timeouts', '--json')).toBe(0)
+    const l = JSON.parse(out.pop()!)
+    expect(l.id).toBe('http-client-timeout')
+    expect([...l.tags].sort()).toEqual(['domain:http', 'skill:backend', 'stack:any', 'stack:go'])
+    expect(l.aliases).toEqual(['outbound-request-timeouts'])
+
+    const again = lesson({ id: 'outbound-request-timeouts', evidence: [{ project: 'gamma', ref: 'PR #8', date: '2026-10-20' }] })
+    expect(await run('lessons', 'write', await lessonFile('again.md', again))).toBe(0)
+    expect(out.pop()).toBe('updated http-client-timeout (confirmed, 3 evidence) (outbound-request-timeouts was merged into it)')
+    expect(await run('lessons', 'merge', 'm.md')).toBe(2)
+  })
+})
+
 describe('forge lessons — git backend', () => {
   let remote: string, clone: string
 
@@ -177,6 +259,14 @@ describe('skills route lesson I/O through the CLI', () => {
     expect(await skill('harvest')).toMatch(/forge lessons write/)
     expect(await skill('lessons')).toMatch(/forge lessons write/)
     expect(await skill('lessons')).toMatch(/forge lessons retire/)
+    expect(await skill('lessons')).toMatch(/forge lessons similar/)
+    expect(await skill('lessons')).toMatch(/forge lessons merge/)
+    expect(await skill('harvest')).toMatch(/forge lessons search/)
+    expect(await skill('harvest')).toMatch(/forge lessons tags/)
+  })
+
+  it('build loads lessons for the chosen stack only', async () => {
+    expect(await skill('build')).toMatch(/forge lessons list --tag skill:<concern> --stack/)
   })
 
   it('every phase that loads lessons says how', async () => {

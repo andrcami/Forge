@@ -16,6 +16,8 @@ export interface Lesson {
   tags: string[]
   evidence: Evidence[]
   retired_reason: string | null
+  /** Ids merged into this lesson. A write or read under one of them lands here. */
+  aliases?: string[]
   body: string
 }
 
@@ -72,6 +74,15 @@ export function validateLesson(input: unknown): Lesson {
   }
   if (typeof l.body !== 'string' || l.body.trim() === '') fail('body must be non-empty')
 
+  if (l.aliases != null) {
+    if (!Array.isArray(l.aliases)) fail('aliases must be an array')
+    for (const a of l.aliases as unknown[]) {
+      if (typeof a !== 'string' || !KEBAB.test(a)) fail(`alias must be kebab-case: ${String(a)}`)
+      if (a === l.id) fail(`a lesson cannot alias its own id: ${a}`)
+    }
+  }
+  const aliases = [...new Set((l.aliases ?? []) as string[])].sort()
+
   return {
     id: l.id as string,
     scope: l.scope as LessonScope,
@@ -79,6 +90,7 @@ export function validateLesson(input: unknown): Lesson {
     tags: l.tags as string[],
     evidence: l.evidence as Evidence[],
     retired_reason: l.retired_reason ?? null,
+    ...(aliases.length ? { aliases } : {}),
     body: (l.body as string).trim(),
   }
 }

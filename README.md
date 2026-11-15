@@ -75,7 +75,19 @@ Lessons carry two independent classifications:
 
 `confirmed` lessons load as rules, `observed` as suggestions, `retired` only when
 something proposes re-adding them — which is how the library records what does
-**not** work.
+**not** work. A lesson is `confirmed` once it has been seen in two different
+projects.
+
+Lessons load by tag and by stack: a project's generated skills get the lessons
+for their concern (`skill:database`) and its stacks, plus `stack:any`, never
+another stack's. Before a harvest proposes a lesson it searches the library for
+one that already says it, and reuses the tags already in use.
+
+As the library grows, `/forge:lessons dedupe` finds lessons that state the same
+rule and, after you approve each group, merges them into one; the old ids stay
+as aliases, so later sightings still count. `/forge:lessons sync` brings an
+existing project's skills up to date with what the library has learned since
+the project was built.
 
 Lessons are written in [Simplified Technical English](references/writing/ste.md)
 (ASD-STE100 rules): the rule first, starting with a command verb, in 20 words or
@@ -217,6 +229,10 @@ is enabled):
 ```bash
 forge store info                     # what is configured, and any problems
 forge lessons list --any-tag 'stack:*'
+forge lessons list --tag skill:database --stack go   # Go, stack:any, and stack-free lessons
+forge lessons search webhook signature              # does the library already know this?
+forge lessons tags                                  # tags in use, and spellings to unify
+forge lessons similar                               # candidate duplicates
 forge store init --repo me/forge-lessons --path ~/dev/forge-lessons [--create]
 ```
 

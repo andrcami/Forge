@@ -48,6 +48,7 @@ across every project it touches.
 | D10 | (2026-10) Scope widened into the product phase — first release, today's alternative, riskiest assumptions, surfaces, brand and feel — rather than a separate product phase before it | A separate `product` phase (two interviews over the same ground; scope already owns the problem and the non-goals) |
 | D11 | (2026-10) Build generates a `qa` concern skill and a proven test harness; the scope's core flows become the e2e map, and UI/UX QA (axe, keyboard, visual regression, reduced motion) runs in Playwright | Leaving tests to the implementation plan (the plan then tests the code it wrote, not the flows the scope promised), a generic shipped QA skill (no flow map, no stack commands), a separate visual-testing tool (Playwright already holds the browser and the flows) |
 | D12 | (2026-10) Supersedes D8: the lesson library moves to its own private repo per context (personal, each employer). Forge reads and writes it only through the `forge` CLI, and `/forge:setup` connects or creates it (`gh`, private, after confirmation). Plugin settings pre-fill setup; `~/.claude/forge/config.json` stays the one source of truth | Lessons inside the Forge repo (a fork or merge between contexts carries the library with it), creating the repo from a session-start hook (an outward action without consent), plugin settings as the source of truth (the CLI must work outside Claude Code) |
+| D13 | (2026-11) Retrieval: lessons load by `skill:` tag **and** stack (`--stack`: that stack, `stack:any`, or none); harvest searches by words and reuses existing tags before it proposes; `observed` → `confirmed` needs evidence from two projects; near-duplicates are merged on approval, with old ids kept as `aliases` so later sightings resolve; `/forge:lessons sync` refreshes an existing project's seeded lessons | Embedding search (a model and an index for a library of hundreds of files, and opaque mistakes), a controlled tag vocabulary file (one more thing to keep in step; counting the tags in use does the job), auto-merging similar lessons (a library that edits itself unattended drifts), deleting merged ids outright (a later sighting under an old id would start a duplicate) |
 
 **D8 depends on repo visibility** *(superseded by D12)*. The repo was created public and switched to
 private on 2026-08-31 before any lesson was written. Lessons name real auth
@@ -329,7 +330,8 @@ retract what was already pushed.
 ### Lifecycle
 
 - New lesson enters `observed`
-- Second independent sighting → `confirmed`, evidence appended
+- Second independent sighting, from another project → `confirmed`, evidence and tags appended (D13)
+- Two lessons found to state one rule → merged on approval; the old ids become aliases (D13)
 - Found wrong or stale → `retired` with a reason, kept visible
 
 ### Load rules
