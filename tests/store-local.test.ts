@@ -139,20 +139,33 @@ describe('LocalStore.merge', () => {
     evidence: [{ project: 'other', ref: 'PR #4', date: '2026-07-01' }],
   })
 
-  it('folds the sources into one lesson: evidence, tags, and old ids as aliases', async () => {
+  it('folds the sources into one lesson: evidence and old ids as aliases, with the given tags', async () => {
     await store.write(a())
     await store.write(b())
-    const { lesson: merged, removed } = await store.merge(
-      lesson({ id: 'http-timeout', body: 'Set a timeout on every outbound HTTP request.', evidence: [] }),
+    const { lesson: merged, removed, droppedTags } = await store.merge(
+      lesson({ id: 'http-timeout', body: 'Set a timeout on every outbound HTTP request.', evidence: [],
+        tags: ['stack:any', 'skill:backend', 'domain:http'] }),
       ['http-timeout', 'request-timeouts'])
 
     expect(removed).toEqual(['request-timeouts'])
     expect(merged.body).toBe('Set a timeout on every outbound HTTP request.')
     expect(merged.status).toBe('confirmed') // evidence now spans two projects
     expect(merged.evidence.map(e => e.ref)).toEqual(['PR #4', 'PR #1'])
-    expect(merged.tags).toEqual(['stack:any', 'skill:backend', 'stack:go'])
+    expect(merged.tags).toEqual(['stack:any', 'skill:backend', 'domain:http'])
+    expect(droppedTags).toEqual(['stack:go'])
     expect(merged.aliases).toEqual(['request-timeouts'])
     expect((await store.list()).map(l => l.id)).toEqual(['http-timeout'])
+  })
+
+  it('edits one lesson\'s tags when it is merged into itself', async () => {
+    await store.write(lesson({ id: 'tool', tags: ['stack:any', 'skill:store', 'platform:any'] }))
+    const { removed, droppedTags } = await store.merge(lesson({ id: 'tool', tags: ['stack:any', 'skill:devops'] }), ['tool'])
+    expect(removed).toEqual([])
+    expect(droppedTags).toEqual(['skill:store', 'platform:any'])
+    const l = await store.read('tool')
+    expect(l?.tags).toEqual(['stack:any', 'skill:devops'])
+    expect(l?.aliases).toBeUndefined()
+    expect(l?.evidence).toHaveLength(1)
   })
 
   it('resolves an old id afterwards: read finds it, and a write under it lands on the merged lesson', async () => {

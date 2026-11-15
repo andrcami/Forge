@@ -252,10 +252,11 @@ export async function main(argv: string[], io: CliIO): Promise<number> {
       if (!file || from.length === 0) throw new UsageError('lessons merge needs the merged lesson file and at least one --from <id>')
       const lesson = parseLesson(await readFile(resolve(io.cwd, file), 'utf8'))
       for (const w of styleWarnings(lesson.body)) io.err(`style: ${w}`)
-      const { lesson: merged, removed } = await store.merge(lesson, from)
+      const { lesson: merged, removed, droppedTags } = await store.merge(lesson, from)
       const folded = removed.length ? `, folding in ${removed.join(', ')}` : ''
       io.out(`merged into ${merged.id} (${merged.status}, ${merged.evidence.length} evidence)${folded}` +
         `${config.store.backend === 'git' && config.store.remote ? ' — committed and pushed' : ''}`)
+      if (droppedTags.length) io.out(`dropped tags: ${droppedTags.join(', ')}`)
       return 0
     }
 
@@ -340,5 +341,9 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   main(process.argv.slice(2), {
     home: homedir(), cwd: process.cwd(),
     out: s => process.stdout.write(s + '\n'), err: s => process.stderr.write(s + '\n'),
-  }).then(code => process.exit(code))
+  }).then(code => {
+    // Set the code and let Node exit when stdout drains. process.exit() here would
+    // cut off output still queued for a pipe (64 KB of --json, for example).
+    process.exitCode = code
+  })
 }

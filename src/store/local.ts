@@ -1,7 +1,7 @@
 import { readFile, writeFile, readdir, mkdir, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parseLesson, serializeLesson, validateLesson, type Evidence, type Lesson, type LessonStatus } from '../lesson.js'
-import type { LessonStore } from './types.js'
+import type { LessonStore, MergeResult } from './types.js'
 
 const evidenceKey = (e: Evidence) => `${e.project}|${e.ref}`
 
@@ -68,11 +68,13 @@ export class LocalStore implements LessonStore {
 
   /**
    * Folds lessons that say the same thing into one. `into` carries the merged
-   * text; the sources' evidence, tags, and ids join it, and their files go. The
-   * old ids become aliases, so a later sighting under one still lands here.
-   * Returns the ids whose files were removed.
+   * text and the merged tags — a person chose them with every source in view,
+   * so a wrong tag on a source can be left behind; the tags left out are
+   * returned so the caller can report them. The sources' evidence and ids join
+   * it, and their files go. The old ids become aliases, so a later sighting
+   * under one still lands here.
    */
-  async merge(into: Lesson, from: string[]): Promise<{ lesson: Lesson; removed: string[] }> {
+  async merge(into: Lesson, from: string[]): Promise<MergeResult> {
     const target = validateLesson(into)
     if (target.scope !== 'portable') throw new Error('the library holds portable lessons only')
     const sources: Lesson[] = []
@@ -113,7 +115,7 @@ export class LocalStore implements LessonStore {
     const lesson = validateLesson({
       ...target,
       status,
-      tags: [...new Set([...target.tags, ...sources.flatMap(s => s.tags)])],
+      tags: target.tags,
       evidence,
       retired_reason: status === 'retired'
         ? target.retired_reason ?? [...new Set(retired.map(s => s.retired_reason))].join(' ')
@@ -125,7 +127,8 @@ export class LocalStore implements LessonStore {
     await writeFile(this.file(lesson.id), serializeLesson(lesson), 'utf8')
     const removed = sources.map(s => s.id).filter(id => id !== lesson.id)
     for (const id of removed) await unlink(this.file(id))
-    return { lesson, removed }
+    const droppedTags = [...new Set(sources.flatMap(s => s.tags))].filter(t => !lesson.tags.includes(t))
+    return { lesson, removed, droppedTags }
   }
 
   async retag(from: string, to: string): Promise<string[]> {

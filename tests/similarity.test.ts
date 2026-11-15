@@ -75,8 +75,14 @@ describe('search', () => {
 describe('nearDuplicateTags', () => {
   it('flags synonyms, plurals and one-letter typos inside a namespace', () => {
     expect(nearDuplicateTags(['stack:ts', 'stack:typescript', 'skill:database', 'skill:databases',
-      'domain:webhook', 'domain:webhok', 'stack:go', 'skill:go'])).toEqual([
+      'domain:webhook', 'domain:webhok'])).toEqual([
       ['stack:ts', 'stack:typescript'], ['skill:database', 'skill:databases'], ['domain:webhook', 'domain:webhok'],
+    ])
+  })
+
+  it('flags one value under two namespaces, except any', () => {
+    expect(nearDuplicateTags(['stack:docker', 'platform:docker', 'provider:docker', 'stack:any', 'platform:any'])).toEqual([
+      ['stack:docker', 'platform:docker'], ['stack:docker', 'provider:docker'], ['platform:docker', 'provider:docker'],
     ])
   })
 

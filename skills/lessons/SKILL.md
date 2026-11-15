@@ -94,23 +94,27 @@ Find lessons that state the same rule and fold each group into one.
    with shared words** (keep both).
 3. For each group to merge, write one lesson file in Simplified Technical English.
    Keep the clearest rule sentence and the strongest evidence text. Use the id
-   that best names the rule, which can be one of the old ids. Run
-   `forge lessons check <file>`.
+   that best names the rule, which can be one of the old ids. Start the tags from
+   all the sources' tags, then remove each one that is wrong for the merged rule
+   (for example `stack:any` on a rule that only holds for Python): the file's
+   tags are the merged lesson's tags. Run `forge lessons check <file>`.
 4. Show each proposed merge — the old lessons side by side and the new text —
    and **approve per group**.
 5. On approval: `forge lessons merge <file> --from <id> --from <id>...`. The CLI
-   adds the evidence and tags of every source, keeps the old ids as aliases, removes
-   their files, and commits the change once. A lesson becomes `confirmed` when
+   adds the evidence of every source, keeps the old ids as aliases, removes
+   their files, and commits the change once. It prints the source tags that the
+   file left out; check that each one was meant to go. A lesson becomes `confirmed` when
    the merged evidence spans two projects, or a source was already confirmed.
    Report the CLI's output line.
 
 The CLI refuses to merge a `retired` lesson with an active one: the retired one
 records what did not hold. Retire the others instead, or keep them apart.
 
-After a dedupe, run `forge lessons tags`. For each pair of tag spellings it
-flags, pick one, show the change, and on approval run
-`forge lessons retag <old-tag> <new-tag>`: it renames the tag on every lesson in
-one commit.
+After a dedupe, run `forge lessons tags`. For each pair of tags it flags, pick
+one, show the change, and on approval run `forge lessons retag <old-tag> <new-tag>`:
+it renames the tag on every lesson in one commit. To fix the tags of a single
+lesson, merge it into itself with the right tags
+(`forge lessons merge <file> --from <its id>`).
 
 ### `retire <id> --reason "<why>"`
 
