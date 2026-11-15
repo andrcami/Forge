@@ -5,9 +5,17 @@ import type { LessonStore, MergeResult } from './types.js'
 
 const evidenceKey = (e: Evidence) => `${e.project}|${e.ref}`
 
+/**
+ * One project, however its name was written: "Paths EMR", "paths-emr" and
+ * "Eventfull (staging)" / "eventfull" each name one project, not two.
+ */
+export function projectKey(name: string): string {
+  return name.replace(/\([^)]*\)/g, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')
+}
+
 /** How many different projects a lesson has been seen in. */
 export function projectCount(evidence: Evidence[]): number {
-  return new Set(evidence.map(e => e.project)).size
+  return new Set(evidence.map(e => projectKey(e.project))).size
 }
 
 export class LocalStore implements LessonStore {

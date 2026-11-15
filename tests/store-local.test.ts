@@ -122,6 +122,15 @@ describe('LocalStore', () => {
     expect(l?.evidence).toHaveLength(2)
   })
 
+  it('counts differently written names of one project as one project', async () => {
+    await store.write(lesson({ evidence: [{ project: 'Paths EMR', ref: 'PR #1', date: '2026-09-01' }] }))
+    await store.write(lesson({ evidence: [{ project: 'paths-emr', ref: 'PR #2', date: '2026-09-02' }] }))
+    await store.write(lesson({ evidence: [{ project: 'paths_emr (staging)', ref: 'PR #3', date: '2026-09-03' }] }))
+    expect((await store.read('test-lesson'))?.status).toBe('observed')
+    await store.write(lesson({ evidence: [{ project: 'Eventfull', ref: 'PR #4', date: '2026-09-04' }] }))
+    expect((await store.read('test-lesson'))?.status).toBe('confirmed')
+  })
+
   it('adds the tags a second sighting brings', async () => {
     await store.write(lesson())
     await store.write(lesson({

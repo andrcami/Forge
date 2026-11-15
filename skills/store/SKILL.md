@@ -94,7 +94,9 @@ by hand.
 
 **Promotion.** A write under an existing id adds the new evidence and tags. The
 lesson becomes `confirmed` when its evidence spans **two projects**. More PRs from
-the same project add evidence, but the lesson stays `observed`.
+the same project add evidence, but the lesson stays `observed`. Project names are
+compared without case, punctuation, or text in brackets, so `Paths EMR` and
+`paths-emr` are one project. Write the repository name as `project`.
 
 ## Backends
 
