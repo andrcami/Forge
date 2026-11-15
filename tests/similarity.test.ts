@@ -80,8 +80,9 @@ describe('nearDuplicateTags', () => {
     ])
   })
 
-  it('flags one value under two namespaces, except any', () => {
-    expect(nearDuplicateTags(['stack:docker', 'platform:docker', 'provider:docker', 'stack:any', 'platform:any'])).toEqual([
+  it('flags one value under two namespaces, except any and skill:', () => {
+    expect(nearDuplicateTags(['stack:docker', 'platform:docker', 'provider:docker', 'stack:any', 'platform:any',
+      'skill:security', 'domain:security'])).toEqual([
       ['stack:docker', 'platform:docker'], ['stack:docker', 'provider:docker'], ['platform:docker', 'provider:docker'],
     ])
   })

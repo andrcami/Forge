@@ -118,7 +118,7 @@ function editDistance(a: string, b: string): number {
 /**
  * Pairs of tags that probably name the same thing: one value under two
  * namespaces, or synonyms, plurals and one-letter typos within one namespace.
- * `stack:any` and `platform:any` are not pairs: `any` means something different in each.
+ * A `skill:` tag is never paired across namespaces, and neither is `any`.
  */
 export function nearDuplicateTags(tags: string[]): [string, string][] {
   const out: [string, string][] = []
@@ -126,10 +126,11 @@ export function nearDuplicateTags(tags: string[]): [string, string][] {
     for (let j = i + 1; j < tags.length; j++) {
       const [na, va] = [tags[i].split(':')[0], tags[i].split(':').slice(1).join(':')]
       const [nb, vb] = [tags[j].split(':')[0], tags[j].split(':').slice(1).join(':')]
-      if (va === vb && va === 'any') continue
       if (va === vb) {
-        // one value under two namespaces: `stack:docker` and `platform:docker`
-        if (na !== nb) out.push([tags[i], tags[j]])
+        // one value under two namespaces: `stack:docker` and `platform:docker`.
+        // `skill:` routes a lesson rather than describing it, so `skill:security`
+        // beside `domain:security` is not drift; nor is `any`, which differs per namespace.
+        if (na !== nb && va !== 'any' && na !== 'skill' && nb !== 'skill') out.push([tags[i], tags[j]])
         continue
       }
       if (na !== nb) continue
