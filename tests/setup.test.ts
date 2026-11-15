@@ -9,6 +9,7 @@ import { serializeLesson, type Lesson } from '../src/lesson.js'
 
 let root: string, home: string, out: string[], err: string[]
 const savedPath = process.env.PATH
+const savedHome = process.env.HOME
 
 const run = (...argv: string[]) =>
   main(argv, { home, cwd: root, out: s => out.push(s), err: s => err.push(s) })
@@ -37,12 +38,17 @@ beforeEach(async () => {
   home = join(root, 'home')
   out = []; err = []
   await mkdir(home, { recursive: true })
-  // commits need an identity; keep the developer's global config out of it
-  process.env.GIT_AUTHOR_NAME = process.env.GIT_COMMITTER_NAME = 'test'
-  process.env.GIT_AUTHOR_EMAIL = process.env.GIT_COMMITTER_EMAIL = 'test@test'
+  // Commits need an identity; keep the developer's global config out of it.
+  // It goes in a global gitconfig under a test HOME, not GIT_AUTHOR_* variables:
+  // simple-git 4 strips inherited GIT_* variables before it runs git.
+  const gitHome = join(root, 'git-home')
+  await mkdir(gitHome, { recursive: true })
+  await writeFile(join(gitHome, '.gitconfig'), '[user]\n\tname = test\n\temail = test@test\n')
+  process.env.HOME = gitHome
 })
 afterEach(async () => {
   process.env.PATH = savedPath
+  process.env.HOME = savedHome
   await rm(root, { recursive: true, force: true })
 })
 

@@ -106,12 +106,28 @@ export class GitStore implements LessonStore {
     await this.pull()
     await this.local.write(lesson)
     const stored = await this.local.read(lesson.id)
-    await this.commit(`lessons: ${stored?.status === 'confirmed' ? 'confirm' : 'add'} ${lesson.id}`)
+    await this.commit(`lessons: ${stored?.status === 'confirmed' ? 'confirm' : 'add'} ${stored?.id ?? lesson.id}`)
   }
 
   async retire(id: string, reason: string): Promise<void> {
     await this.pull()
+    const existing = await this.local.read(id)
     await this.local.retire(id, reason)
-    await this.commit(`lessons: retire ${id}\n\n${reason}`)
+    await this.commit(`lessons: retire ${existing?.id ?? id}\n\n${reason}`)
+  }
+
+  async retag(from: string, to: string): Promise<string[]> {
+    await this.pull()
+    const changed = await this.local.retag(from, to)
+    await this.commit(`lessons: retag ${from} → ${to}\n\n${changed.join('\n')}`)
+    return changed
+  }
+
+  async merge(into: Lesson, from: string[]): Promise<{ lesson: Lesson; removed: string[] }> {
+    await this.pull()
+    const result = await this.local.merge(into, from)
+    const others = result.removed.length ? ` (merged ${result.removed.join(', ')})` : ''
+    await this.commit(`lessons: merge into ${result.lesson.id}${others}`)
+    return result
   }
 }

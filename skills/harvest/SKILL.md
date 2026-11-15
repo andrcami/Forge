@@ -56,9 +56,23 @@ silently**. For each: the lesson text, proposed tags (including the `skill:` tag
 that routes it), and proposed status.
 
 A new lesson enters `observed`. If it matches an existing lesson's id, the write
-appends evidence and promotes it to `confirmed` — the second independent sighting
-is what earns rule status. Check for a match first with `forge lessons list`, so
-the proposal can say "this confirms <id>".
+appends evidence and any new tags. When that evidence spans two projects, it
+promotes the lesson to `confirmed`: a sighting in a second, independent project
+is what earns rule status. Two PRs in one project add evidence but do not promote.
+
+Before you propose a lesson, look for one that already says it — a match is
+found by meaning, not by id, so search with the rule's key words:
+
+- `forge lessons search <key words>` ranks lessons by the words they share.
+  Read the top hits. If one states the same rule, **reuse its id** so the write
+  becomes a second sighting, and say "this confirms <id>". An id that was merged
+  into another lesson still works: the write lands on the merged lesson.
+- If a top hit is `retired`, show it with its reason. The library already
+  learned that this rule did not hold; propose it again only with new evidence
+  that answers that reason.
+- `forge lessons tags` lists the tags in use, with counts. Reuse an existing
+  tag value before you make a new one (`stack:typescript`, not a new `stack:ts`).
+  A lesson behind an unknown spelling of a tag is a lesson no one loads.
 
 Before you propose a library lesson, write it to a temp file and run
 `forge lessons check <file>`. Fix any style warning, then show it. On approval,

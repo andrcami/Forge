@@ -64,10 +64,16 @@ From `references/templates/skill.md`. Each generated skill contains:
 - A **link** to the Forge stack reference for generic know-how — never inline it
 - An empty `## Lessons` section
 
-Then **load library lessons tagged `skill:<concern>`** —
-`forge lessons list --tag skill:<concern> --status confirmed --status observed`,
-via the CLI the `store` skill describes — and seed the Lessons section: `confirmed` as rules, `observed` as suggestions marked as such. This is
-the point where a new project inherits what every prior project learned.
+Then **load library lessons tagged `skill:<concern>`** for this project's stack —
+`forge lessons list --tag skill:<concern> --stack <s> [--stack <s>]... --status confirmed --status observed`,
+via the CLI the `store` skill describes. Pass one `--stack` for each stack tag
+the architecture chose (language, framework, datastore: `--stack go --stack sqlite`).
+`--stack` keeps lessons for those stacks, for `stack:any`, and lessons with no
+stack tag, so a Go lesson never lands in a Python project. Seed the Lessons
+section: `confirmed` as rules, `observed` as suggestions marked as such. End
+each seeded line with its library id, `(library: <id>)`, so `/forge:lessons sync`
+can later tell which library lessons a skill already holds. This is the point
+where a new project inherits what every prior project learned.
 
 ## Generating the qa skill
 

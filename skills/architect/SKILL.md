@@ -34,11 +34,18 @@ Produce **three**, reasoned from the answers first, then checked against
 `references/stacks/`. The catalog is evidence, not a verdict — never pick a stack
 because it has a file.
 
-Load library lessons tagged `stack:*` or `arch:*` before comparing —
-`forge lessons list --any-tag 'stack:*' --any-tag 'arch:*' --status confirmed --status observed`
-(the `store` skill says where the CLI is). A `confirmed`
-lesson is a prior project reporting what actually hurt; an `observed` one is a
-suggestion. Say which informed a trade-off.
+Load library lessons before comparing (the `store` skill says where the CLI is):
+
+- the architecture lessons, once —
+  `forge lessons list --any-tag 'arch:*' --status confirmed --status observed`
+- then, for each candidate, the lessons for its stack —
+  `forge lessons list --any-tag 'stack:*' --stack <s> [--stack <s>]... --status confirmed --status observed`,
+  one `--stack` per language, framework, and datastore it names. The output
+  includes `stack:any` lessons; count them once, not per candidate.
+
+Do not load every `stack:*` lesson in the library: lessons for stacks no
+candidate uses are noise. A `confirmed` lesson is a prior project reporting what
+actually hurt; an `observed` one is a suggestion. Say which informed a trade-off.
 
 Each candidate states:
 

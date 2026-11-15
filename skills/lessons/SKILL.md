@@ -1,6 +1,6 @@
 ---
 name: lessons
-description: Read, import, promote, retire, and purge lessons in the Forge library. Use when backfilling lessons from an existing repo, reviewing what the library holds, retiring a lesson that turned out wrong, or clearing project lessons.
+description: Read, search, import, sync, dedupe, retire, and purge lessons in the Forge library. Use when backfilling lessons from an existing repo, reviewing what the library holds, pulling new library lessons into an existing project, merging lessons that say the same thing, retiring a lesson that turned out wrong, or clearing project lessons.
 ---
 
 # Lesson library
@@ -52,6 +52,65 @@ wrong-and-global.
 
 `forge lessons list [--tag <t>]` — the library, `confirmed` first, `retired`
 last. The `store` skill has the full CLI and where it lives.
+
+### `search <words>`
+
+`forge lessons search <words>` — lessons ranked by how many of the words they
+hold (id, tags, and body). Use it to answer "do we already know this?".
+
+### `sync`
+
+Bring an existing project's skills up to date with the library. Build seeds each
+generated skill's `## Lessons` once; lessons learned in other projects after that
+never arrive unless something pulls them. This command does.
+
+1. Read the stack from `docs/forge/architecture.md` (or ask, if there is none).
+2. For each `.claude/skills/<concern>/SKILL.md` with a `## Lessons` section, run
+   `forge lessons list --tag skill:<concern> --stack <s>... --json`.
+3. Compare by the `(library: <id>)` marker at the end of each seeded line.
+   Match the ids **and the aliases** of each library lesson, because a merge
+   can rename a lesson. Propose, per skill:
+   - **add**: `confirmed` or `observed` lessons the skill does not hold yet;
+   - **promote**: lines seeded as suggestions whose lesson is now `confirmed`;
+   - **remove**: lines whose lesson is now `retired`, with the retired reason;
+   - **rename**: lines that name an id which is now an alias, to the new id.
+   Leave lines without a `(library: …)` marker alone: they are project lessons.
+4. Show the full proposal, then **approve per skill**. Write only the approved
+   lines, in the format Build uses: the rule, then `(library: <id>)`, with
+   `observed` ones marked as suggestions.
+
+Sync writes only to the project's skills. It never writes to the library.
+
+### `dedupe`
+
+Find lessons that state the same rule and fold each group into one.
+
+1. `forge lessons similar` lists pairs of active lessons with a similarity score
+   from 0 to 1, best first. The default cut-off is 0.35. Use `--min 0.25` to look
+   wider, and `--tag`/`--stack` to dedupe one area at a time.
+2. The score only finds candidates. Read both lessons (`forge lessons read <id>`)
+   and decide: **same rule** (merge), **one rule is a special case of the other**
+   (usually keep both, and make the narrower one say so), or **different rules
+   with shared words** (keep both).
+3. For each group to merge, write one lesson file in Simplified Technical English.
+   Keep the clearest rule sentence and the strongest evidence text. Use the id
+   that best names the rule, which can be one of the old ids. Run
+   `forge lessons check <file>`.
+4. Show each proposed merge — the old lessons side by side and the new text —
+   and **approve per group**.
+5. On approval: `forge lessons merge <file> --from <id> --from <id>...`. The CLI
+   adds the evidence and tags of every source, keeps the old ids as aliases, removes
+   their files, and commits the change once. A lesson becomes `confirmed` when
+   the merged evidence spans two projects, or a source was already confirmed.
+   Report the CLI's output line.
+
+The CLI refuses to merge a `retired` lesson with an active one: the retired one
+records what did not hold. Retire the others instead, or keep them apart.
+
+After a dedupe, run `forge lessons tags`. For each pair of tag spellings it
+flags, pick one, show the change, and on approval run
+`forge lessons retag <old-tag> <new-tag>`: it renames the tag on every lesson in
+one commit.
 
 ### `retire <id> --reason "<why>"`
 
