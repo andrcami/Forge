@@ -111,7 +111,7 @@ effect and flags problems.
 ```json
 { "store": { "backend": "git",
              "path": "~/dev/forge-lessons",
-             "remote": "git@github.com:<owner>/forge-lessons.git",
+             "remote": "https://github.com/<owner>/forge-lessons.git",
              "subdir": "lessons" } }
 ```
 
