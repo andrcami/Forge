@@ -9,6 +9,31 @@ development — and accumulates what it learns across every project it touches.
 The lesson library is not in this repository. Each context (personal, each
 employer) keeps its own private lesson repo, connected with `/forge:setup`.
 
+## Quick start
+
+```
+/plugin marketplace add andrcami/Forge
+/plugin install forge@forge
+/forge:setup
+```
+
+Then start a project with `/forge:scope`. Other ways to install are under
+[Install](#install).
+
+What it gives you:
+
+- **Phase gates.** Scope, architecture, design, and build each write a document
+  the next phase reads, and each refuses to run on an unapproved or
+  contradictory one.
+- **Generated project skills.** Build writes thin, stack-specific skills
+  (database, frontend, qa, security, …) and a test harness before the first
+  feature.
+- **A lesson library that follows you.** A correction you make in one project
+  becomes a lesson in your private git repo, and the next project's skills
+  start with it. Lessons are confirmed on a second sighting in another
+  project, retired with a reason when they turn out wrong, and merged when two
+  say the same thing.
+
 ## Phases
 
 | Command | Phase | Output |
