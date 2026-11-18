@@ -115,14 +115,25 @@ function editDistance(a: string, b: string): number {
   return d[a.length][b.length]
 }
 
-/** Pairs of tags in one namespace that probably name the same thing. */
+/**
+ * Pairs of tags that probably name the same thing: one value under two
+ * namespaces, or synonyms, plurals and one-letter typos within one namespace.
+ * A `skill:` tag is never paired across namespaces, and neither is `any`.
+ */
 export function nearDuplicateTags(tags: string[]): [string, string][] {
   const out: [string, string][] = []
   for (let i = 0; i < tags.length; i++) {
     for (let j = i + 1; j < tags.length; j++) {
       const [na, va] = [tags[i].split(':')[0], tags[i].split(':').slice(1).join(':')]
       const [nb, vb] = [tags[j].split(':')[0], tags[j].split(':').slice(1).join(':')]
-      if (na !== nb || va === vb) continue
+      if (va === vb) {
+        // one value under two namespaces: `stack:docker` and `platform:docker`.
+        // `skill:` routes a lesson rather than describing it, so `skill:security`
+        // beside `domain:security` is not drift; nor is `any`, which differs per namespace.
+        if (na !== nb && va !== 'any' && na !== 'skill' && nb !== 'skill') out.push([tags[i], tags[j]])
+        continue
+      }
+      if (na !== nb) continue
       const syn = SYNONYMS.some(g => g.includes(va) && g.includes(vb))
       const plural = va + 's' === vb || vb + 's' === va
       const typo = Math.min(va.length, vb.length) >= 5 && editDistance(va, vb) <= 1

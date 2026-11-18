@@ -6,7 +6,7 @@ description: Phase 3 of Forge — set the visual and interaction direction for a
 # Phase 3 — Design
 
 > **Paths.** `references/…` below lives in the Forge plugin, not in this project:
-> it is `../../references/…` from this skill's base directory. Every other path
+> it is `../../references/…` from the base directory of this skill. Every other path
 > (`docs/…`, `DESIGN.md`, `.claude/…`) is in the project being worked on. When a
 > generated file links a Forge reference, write the resolved absolute path.
 

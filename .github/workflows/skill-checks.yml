@@ -1,0 +1,42 @@
+# NVIDIA SkillEvaluator Tier 1 on every skill in skills/, from the 1.0.1
+# release bundle (ci/bundles/1.0.1/skill-checks.yml in NVIDIA/SkillEvaluator).
+# Keep the workflow and image pins from one bundle; update both together.
+# The scan is static (llm: false): no model key, no secrets.
+name: Skill checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  skills:
+    uses: NVIDIA/SkillEvaluator/.github/workflows/evaluate-skills.yml@c9369a7811bde083b550f2ac488222e8c388d7fd
+    with:
+      image: ghcr.io/nvidia/skillevaluator-tier1@sha256:fbff256df8f760019539d442b7cb533d7ec50efab37f4482b7b670e2e4b4189a
+      paths: skills
+      min-score: 70
+      security-baselines: false
+      # every skill, every run: the README table and badge describe the whole set
+      scan-mode: all
+      llm: false
+
+  # The README table is the one this scan measured: a PR whose skills score
+  # differently fails here and prints the block to paste (or run skills:readme).
+  readme:
+    needs: skills
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: skill-evaluator-tier1-evidence-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/skill-evidence
+      - name: README results match the scan
+        run: npx tsx src/skill-results.ts "$RUNNER_TEMP/skill-evidence" --readme README.md --check

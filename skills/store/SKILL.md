@@ -47,14 +47,19 @@ forge store init --local [--path <dir>] [--import <dir>] [--force]
   the rule (the first sentence); `read` gives the whole lesson.
 - `search` ranks lessons by how many of the words they hold, across id, tags,
   and body. Use it before you propose a lesson, to find one that says it already.
-- `tags` counts every tag in use and flags spellings that probably mean the same
-  thing (`stack:ts` and `stack:typescript`). Reuse a tag before you invent one.
+- `tags` counts every tag in use and flags tags that probably mean the same
+  thing: `stack:ts` and `stack:typescript`, or one value under two namespaces,
+  such as `stack:docker` and `platform:docker`. Reuse a tag before you invent one.
 - `similar` lists pairs of active lessons that probably state the same rule,
   scored 0–1 (default cut-off 0.35). It only finds candidates; a person decides.
 - `merge` writes the given lesson and folds the `--from` lessons into it: their
-  evidence and tags join it, their ids become `aliases`, and their files are
-  removed, in one commit. Naming an existing lesson's id as the target folds the
-  sources into that lesson. It refuses to mix retired and active lessons.
+  evidence joins it, their ids become `aliases`, and their files are removed, in
+  one commit. The file's tags are the merged lesson's tags; `merge` prints any
+  source tags the file left out (`dropped tags: …`). Naming an existing lesson's
+  id as the target folds the sources into that lesson. It refuses to mix retired
+  and active lessons.
+- To fix the tags of one lesson, merge it into itself: write the lesson with the
+  right tags and run `forge lessons merge <file> --from <its id>`.
 - `retag` renames one tag on every lesson that carries it, in one commit.
 - `check` validates a lesson file and prints style warnings (Simplified Technical
   English, `references/writing/ste.md`) without writing anything. `write` prints
@@ -89,7 +94,9 @@ by hand.
 
 **Promotion.** A write under an existing id adds the new evidence and tags. The
 lesson becomes `confirmed` when its evidence spans **two projects**. More PRs from
-the same project add evidence, but the lesson stays `observed`.
+the same project add evidence, but the lesson stays `observed`. Project names are
+compared without case, punctuation, or text in brackets, so `Paths EMR` and
+`paths-emr` are one project. Write the repository name as `project`.
 
 ## Backends
 
@@ -104,7 +111,7 @@ effect and flags problems.
 ```json
 { "store": { "backend": "git",
              "path": "~/dev/forge-lessons",
-             "remote": "git@github.com:<owner>/forge-lessons.git",
+             "remote": "https://github.com/<owner>/forge-lessons.git",
              "subdir": "lessons" } }
 ```
 

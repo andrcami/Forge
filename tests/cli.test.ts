@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtemp, rm, mkdir, writeFile, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { execFile } from 'node:child_process'
 import { simpleGit } from 'simple-git'
 import { main, filterLessons } from '../src/cli.js'
 import { serializeLesson, type Lesson } from '../src/lesson.js'
@@ -188,15 +189,16 @@ describe('forge lessons — retrieval and merging', () => {
   })
 
   it('merge folds the duplicate in, and its old id still resolves', async () => {
-    const merged = lesson({ id: 'http-client-timeout', tags: ['stack:any', 'skill:backend'], evidence: [],
+    const merged = lesson({ id: 'http-client-timeout', tags: ['stack:any', 'skill:backend', 'domain:http'], evidence: [],
       body: 'Set a timeout on every outbound HTTP request. A request with no timeout blocks a worker when the peer hangs.' })
     expect(await run('lessons', 'merge', await lessonFile('m.md', merged), '--from', 'outbound-request-timeouts')).toBe(0)
+    expect(out.pop()).toBe('dropped tags: stack:go')
     expect(out.pop()).toBe('merged into http-client-timeout (confirmed, 2 evidence), folding in outbound-request-timeouts')
 
     expect(await run('lessons', 'read', 'outbound-request-timeouts', '--json')).toBe(0)
     const l = JSON.parse(out.pop()!)
     expect(l.id).toBe('http-client-timeout')
-    expect([...l.tags].sort()).toEqual(['domain:http', 'skill:backend', 'stack:any', 'stack:go'])
+    expect(l.tags).toEqual(['stack:any', 'skill:backend', 'domain:http'])
     expect(l.aliases).toEqual(['outbound-request-timeouts'])
 
     const again = lesson({ id: 'outbound-request-timeouts', evidence: [{ project: 'gamma', ref: 'PR #8', date: '2026-10-20' }] })
@@ -248,6 +250,20 @@ describe('bin/forge', () => {
     const script = await readFile(join(__dirname, '..', 'bin', 'forge'), 'utf8')
     expect(script).toMatch(/src\/cli\.ts/)
   })
+
+  it('writes all of a large --json output to a pipe before it exits', async () => {
+    const lib = join(root, 'big')
+    await mkdir(lib, { recursive: true })
+    for (let i = 0; i < 300; i++) {
+      await writeFile(join(lib, `l-${i}.md`), serializeLesson(lesson({ id: `l-${i}`, body: `Do thing ${i}. ${'x'.repeat(200)}` })))
+    }
+    await config({ backend: 'local', path: lib })
+    const stdout = await new Promise<string>((res, rej) =>
+      execFile(join(__dirname, '..', 'bin', 'forge'), ['lessons', 'list', '--json'],
+        { env: { ...process.env, HOME: home }, maxBuffer: 1 << 24 }, (e, o) => e ? rej(e) : res(o)))
+    expect(stdout.length).toBeGreaterThan(65536)
+    expect(JSON.parse(stdout)).toHaveLength(300)
+  }, 30000)
 })
 
 describe('skills route lesson I/O through the CLI', () => {
