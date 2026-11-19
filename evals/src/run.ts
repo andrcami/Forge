@@ -20,6 +20,7 @@ import {
   checkProject, isHarvest, validateExpectation,
   type Expectation, type Finding, type HarvestExpectation, type PhaseExpectation, type PluginPin, type VerifyStep,
 } from './check.js'
+import { resolveClaudeBin, systemDeps } from './claude-bin.js'
 
 const FORGE = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const PROJECTS = join(FORGE, 'evals', 'projects')
@@ -65,6 +66,10 @@ const PHASE_PROMPT: Record<string, string> = {
 /** Harvest reads and writes the library through the plugin's CLI, by name or by path. */
 const FORGE_CLI = ['Bash(forge:*)', `Bash(${join(FORGE, 'bin', 'forge')}:*)`]
 
+/** Answers the nested session's permission prompts: allows writes inside the workspace's .claude/skills/, denies the rest. */
+const APPROVER = join(FORGE, 'evals', 'src', 'approve-skill-writes.mjs')
+const APPROVER_SERVER = 'forge-eval'
+
 async function loadProject(name: string): Promise<{ brief: string; exp: Expectation }> {
   const dir = join(PROJECTS, name)
   const exp = JSON.parse(await readFile(join(dir, 'expect.json'), 'utf8'))
@@ -97,6 +102,9 @@ async function ensurePlugin(pin: PluginPin): Promise<string> {
   return dir
 }
 
+let claudeBinCache: string | undefined
+const claudeBin = () => (claudeBinCache ??= resolveClaudeBin(systemDeps))
+
 function runPhase(cwd: string, phase: string, opts: { yolo: boolean; model?: string; plugins: string[] }): Promise<number> {
   const args = [
     '-p', PHASE_PROMPT[phase],
@@ -107,14 +115,17 @@ function runPhase(cwd: string, phase: string, opts: { yolo: boolean; model?: str
     '--output-format', 'json',
   ]
   if (opts.yolo) args.push('--permission-mode', 'bypassPermissions')
-  else args.push('--permission-mode', 'acceptEdits', '--allowedTools',
-    ...SCAFFOLD_TOOLS, ...FORGE_CLI)
+  else args.push('--permission-mode', 'acceptEdits',
+    // writes to the workspace's .claude/skills/ always prompt, and -p has nobody to answer: see approve-skill-writes.mjs
+    '--mcp-config', JSON.stringify({ mcpServers: { [APPROVER_SERVER]: { type: 'stdio', command: process.execPath, args: [APPROVER, cwd] } } }),
+    '--permission-prompt-tool', `mcp__${APPROVER_SERVER}__approve`,
+    '--allowedTools', ...SCAFFOLD_TOOLS, ...FORGE_CLI)
   if (opts.model) args.push('--model', opts.model)
 
   return new Promise((res, rej) => {
     // the eval tests the phases: not whether this checkout is the newest release, nor the chat-style offer
     const env = { ...process.env, FORGE_NO_UPDATE_CHECK: '1', FORGE_EVAL: '1' }
-    const child = spawn('claude', args, { cwd, env, stdio: ['ignore', 'pipe', 'inherit'] })
+    const child = spawn(claudeBin(), args, { cwd, env, stdio: ['ignore', 'pipe', 'inherit'] })
     let stdout = ''
     child.stdout.on('data', d => { stdout += d })
     child.on('error', rej)
