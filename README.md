@@ -1,10 +1,38 @@
 # Forge
 
+[![CI](https://github.com/andrcami/Forge/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/andrcami/Forge/actions/workflows/ci.yml)
+[![Skill checks](https://github.com/andrcami/Forge/actions/workflows/skill-checks.yml/badge.svg?branch=main)](https://github.com/andrcami/Forge/actions/workflows/skill-checks.yml)
+
 A Claude Code plugin that drives a project from scope through architecture into
 development — and accumulates what it learns across every project it touches.
 
 The lesson library is not in this repository. Each context (personal, each
 employer) keeps its own private lesson repo, connected with `/forge:setup`.
+
+## Quick start
+
+```
+/plugin marketplace add andrcami/Forge
+/plugin install forge@forge
+/forge:setup
+```
+
+Then start a project with `/forge:scope`. Other ways to install are under
+[Install](#install).
+
+What it gives you:
+
+- **Phase gates.** Scope, architecture, design, and build each write a document
+  the next phase reads, and each refuses to run on an unapproved or
+  contradictory one.
+- **Generated project skills.** Build writes thin, stack-specific skills
+  (database, frontend, qa, security, …) and a test harness before the first
+  feature.
+- **A lesson library that follows you.** A correction you make in one project
+  becomes a lesson in your private git repo, and the next project's skills
+  start with it. Lessons are confirmed on a second sighting in another
+  project, retired with a reason when they turn out wrong, and merged when two
+  say the same thing.
 
 ## Phases
 
@@ -133,6 +161,37 @@ Tune them in `~/.claude/forge/config.json` (or a project's `.forge.json`):
 ```
 
 `"every": 0` turns off the turn count; `"lessonCheckpoints": false` turns off all four.
+
+## Skill checks
+
+Every pull request and every push to `main` runs
+[NVIDIA SkillEvaluator](https://github.com/NVIDIA/SkillEvaluator) Tier 1 on each
+skill in `skills/`, from its pinned 1.0.1 release workflow
+(`.github/workflows/skill-checks.yml`). A skill fails on any failed or incomplete
+check, or a quality score under 70. The table below is the result of that scan.
+CI keeps it true: a pull request whose skills score differently fails until the
+table matches.
+
+<!-- skill-checks:start -->
+**8 of 8 skills pass** NVIDIA SkillEvaluator 1.0.1 (SkillSpector 2.13.4) Tier 1: schema, security, PII, secrets,
+licence, Unicode smuggling, code risk, link integrity and quality, with a quality score of 70 or more.
+
+| Skill | Verdict | Quality / 100 | Findings (critical / high / medium / low) |
+|---|---|---|---|
+| `architect` | ✅ pass | 89.8 (B) | 0 / 0 / 4 / 7 |
+| `build` | ✅ pass | 89.0 (B) | 0 / 0 / 5 / 8 |
+| `design` | ✅ pass | 84.8 (B) | 0 / 0 / 4 / 10 |
+| `harvest` | ✅ pass | 89.8 (B) | 0 / 0 / 4 / 7 |
+| `lessons` | ✅ pass | 84.8 (B) | 0 / 0 / 4 / 10 |
+| `scope` | ✅ pass | 86.5 (B) | 0 / 0 / 4 / 9 |
+| `setup` | ✅ pass | 90.2 (A) | 0 / 0 / 6 / 7 |
+| `store` | ✅ pass | 91.5 (A) | 0 / 0 / 5 / 6 |
+<!-- skill-checks:end -->
+
+The full per-skill reports are in each run's `skill-evaluator-tier1` artifact
+(open `index.html`). To refresh the table, download the run's
+`skill-evaluator-tier1-evidence` artifact and run
+`npm run skills:readme -- <its folder>`.
 
 ## Install
 

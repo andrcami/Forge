@@ -1,7 +1,7 @@
 import { join } from 'node:path'
 import { simpleGit, type SimpleGit } from 'simple-git'
 import { LocalStore } from './local.js'
-import type { LessonStore } from './types.js'
+import type { LessonStore, MergeResult } from './types.js'
 import type { Lesson } from '../lesson.js'
 
 /**
@@ -123,7 +123,7 @@ export class GitStore implements LessonStore {
     return changed
   }
 
-  async merge(into: Lesson, from: string[]): Promise<{ lesson: Lesson; removed: string[] }> {
+  async merge(into: Lesson, from: string[]): Promise<MergeResult> {
     await this.pull()
     const result = await this.local.merge(into, from)
     const others = result.removed.length ? ` (merged ${result.removed.join(', ')})` : ''

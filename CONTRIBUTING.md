@@ -30,6 +30,12 @@ npm run eval -- <sample>            # see evals/README.md
 
 This uses your own Claude Code session, which counts against your plan's usage.
 
+A change to `skills/` is also scanned by NVIDIA SkillEvaluator (the **Skill
+checks** workflow). If a skill's score or findings change, the `readme` job
+fails and prints the new results table: paste it into the README's
+`skill-checks` block, or download the run's `skill-evaluator-tier1-evidence`
+artifact and run `npm run skills:readme -- <its folder>`.
+
 ## Ground rules
 
 - **No lessons in this repository.** The lesson library lives in each user's own
