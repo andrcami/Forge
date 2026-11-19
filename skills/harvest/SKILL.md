@@ -11,6 +11,18 @@ the skills so the next session starts ahead.
 Diff the branch's work and the `docs/context/status.md` deltas against the
 relevant skills. For each candidate lesson, four questions in order:
 
+## 0. Sweep the untracked build notes
+
+Agent builds keep notes git does not track: scratch workspaces, plan ledgers,
+review packages, fix reports. Deferred items live only there.
+
+- Read every untracked build note. List each deferred item, accepted residual, and open finding.
+- Copy each item into `docs/context/status.md` with its origin and why it matters.
+- Skip an item that `status.md` already lists. If it is fixed, note where.
+- Do not delete a build workspace before this sweep is done.
+
+Example: a ledger line "defer: retry limit for `fetch-queue` (minor)" becomes a `status.md` gap.
+
 ## 1. Is it durable and general?
 
 Would it bite the next unrelated feature? If it is one-off branch trivia, stop —

@@ -18,6 +18,19 @@ read what Forge wrote. The per-phase transcripts are saved in `docs/eval/`, and
 any answer the simulated user didn't cover is logged in
 `docs/eval/assumptions.md`.
 
+**Which `claude`.** On macOS and Linux the runner starts `claude` from `PATH`.
+On Windows, npm's `claude` shims can't be started without a shell, so it finds
+the real `claude.exe`: one on `PATH`, else the npm package's under `npm root -g`.
+Set `CLAUDE_BIN` to choose the executable yourself. On Windows, a build sample's
+generated commands run through `sh -c`, so they also need a POSIX `sh` on `PATH`
+(Git Bash provides one); harvest samples don't run any.
+
+**Permissions.** Without `--yolo`, the nested session runs in `acceptEdits` with
+an allowlist of scaffold commands. Claude Code always asks before a write under
+`.claude/skills/`, and `-p` has nobody to ask, so the runner passes
+`src/approve-skill-writes.mjs` as the permission prompt tool: it approves Edit
+and Write inside that workspace's `.claude/skills/` and denies every other prompt.
+
 **Cost.** Each transcript reports `total_cost_usd`: what the run would cost at
 API prices (about $0.60–$0.90 for the samples without UI, more for the UI ones).
 It is billed only when `claude` signs in with an API key. On a Claude
