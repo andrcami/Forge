@@ -4,15 +4,16 @@
  *   npm run eval -- [project…] [--yolo] [--no-verify] [--model <id>]
  *   npm run eval:check -- <workspace> <project>
  *
- * A harvest sample instead starts from a git repo the runner builds: seed/ on
- * main, branch/ laid over it on a feature branch. /forge:harvest then runs on it.
+ * A library sample (harvest, dedupe, sync) instead starts from a git repo the
+ * runner builds: seed/ on main and, for a harvest, branch/ laid over it on a
+ * feature branch. The sample's one command then runs on it.
  *
  * Each sample runs in a fresh temp workspace. The simulated user's answers
  * (brief.md) are copied in; the expectations (expect.json) never are, so the
  * phases cannot read what they are graded against.
  */
 import { spawn, execFileSync } from 'node:child_process'
-import { access, cp, mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises'
+import { access, cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -21,6 +22,7 @@ import {
   type Expectation, type Finding, type HarvestExpectation, type PhaseExpectation, type PluginPin, type VerifyStep,
 } from './check.js'
 import { resolveClaudeBin, systemDeps } from './claude-bin.js'
+import { record, type SampleResult } from './receipt.js'
 
 const FORGE = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const PROJECTS = join(FORGE, 'evals', 'projects')
@@ -61,6 +63,8 @@ const PHASE_PROMPT: Record<string, string> = {
   design: '/forge:design — run this phase for the project in this directory.',
   build: '/forge:build — run this phase for the project in this directory.',
   harvest: '/forge:harvest — the current branch is finished and its PR is about to open; harvest it against main.',
+  dedupe: '/forge:lessons dedupe — find lessons in the library that state the same rule and merge them.',
+  sync: '/forge:lessons sync — bring this project\'s skills up to date with the lesson library.',
 }
 
 /** Harvest reads and writes the library through the plugin's CLI, by name or by path. */
@@ -208,28 +212,50 @@ async function verifyBuild(cwd: string, exp: PhaseExpectation): Promise<void> {
 }
 
 /**
- * Builds a harvest sample's repo: seed/ committed on main, then branch/ laid
- * over it and committed on the feature branch. Snapshots the files the sample
- * expects to stay unchanged, and keeps docs/eval out of git so the harvest
- * sees only the branch's own work.
+ * Builds a library sample's repo: seed/ committed on main, the sample's own
+ * lib/ in place of the seed's library, then, when the sample names a branch,
+ * branch/ laid over it and committed on that branch. Snapshots the files the
+ * sample expects to stay unchanged, and keeps docs/eval out of git so a
+ * harvest sees only the branch's own work.
  */
 async function buildBranch(workspace: string, name: string, exp: HarvestExpectation): Promise<void> {
   const git = (...a: string[]) => execFileSync('git',
     ['-c', 'user.name=Forge Eval', '-c', 'user.email=eval@forge.invalid', '-c', 'commit.gpgsign=false', ...a],
     { cwd: workspace, stdio: 'ignore' })
   await cp(join(PROJECTS, exp.harness.seedFrom ?? name, 'seed'), workspace, { recursive: true })
+  const ownLib = join(PROJECTS, name, 'lib')
+  if (await access(ownLib).then(() => true, () => false)) {
+    await rm(join(workspace, 'lib'), { recursive: true, force: true })
+    await cp(ownLib, join(workspace, 'lib'), { recursive: true })
+  }
   git('init', '-q', '--initial-branch=main')
   await writeFile(join(workspace, '.git', 'info', 'exclude'), 'docs/eval/\n')
   git('add', '-A')
   git('commit', '-q', '-m', 'Initial state')
-  git('checkout', '-q', '-b', exp.harness.branch.name)
-  await cp(join(PROJECTS, name, 'branch'), workspace, { recursive: true })
-  git('add', '-A')
-  git('commit', '-q', '-m', exp.harness.branch.message)
+  const branch = exp.harness.branch
+  if (branch) {
+    git('checkout', '-q', '-b', branch.name)
+    await cp(join(PROJECTS, exp.harness.branchFrom ?? name, 'branch'), workspace, { recursive: true })
+    git('add', '-A')
+    git('commit', '-q', '-m', branch.message)
+  }
 
   const snapshot: Record<string, string | null> = {}
   for (const f of exp.expect.unchanged ?? []) snapshot[f] = await readFile(join(workspace, f), 'utf8').catch(() => null)
   await writeFile(join(workspace, 'docs', 'eval', 'snapshot.json'), JSON.stringify(snapshot, null, 2))
+}
+
+/** What the run would cost at API prices, summed from the phase transcripts. */
+async function runCost(cwd: string, phases: string[]): Promise<number | undefined> {
+  let total = 0
+  for (const p of phases) {
+    try { total += JSON.parse(await readFile(join(cwd, 'docs', 'eval', `transcript-${p}.json`), 'utf8')).total_cost_usd ?? 0 } catch { /* no transcript */ }
+  }
+  return total ? Math.round(total * 100) / 100 : undefined
+}
+
+function claudeVersion(): string | null {
+  try { return execFileSync(claudeBin(), ['--version'], { encoding: 'utf8' }).trim().split(/\s/)[0] || null } catch { return null }
 }
 
 function report(name: string, exp: Expectation, findings: Finding[], workspace: string): boolean {
@@ -262,6 +288,9 @@ async function main() {
   // validate every fixture before spending anything
   const loaded = await Promise.all(selected.map(async n => [n, await loadProject(n)] as const))
 
+  // a receipt certifies the default run: not one with permissions bypassed or the build's commands skipped
+  const certify = !flag('--yolo') && !flag('--no-verify')
+  const results: Record<string, SampleResult> = {}
   let failed = 0
   for (const [name, { brief, exp }] of loaded) {
     const workspace = await mkdtemp(join(tmpdir(), `forge-eval-${name}-`))
@@ -281,9 +310,15 @@ async function main() {
     if (!isHarvest(exp) && exp.phases.includes('build') && !flag('--no-verify')) await verifyBuild(workspace, exp)
     const ok = report(name, exp, await checkProject(workspace, exp, FORGE), workspace)
     if (!ok) failed++
+    results[name] = { passed: ok, ranAt: new Date().toISOString(), costUsd: await runCost(workspace, exp.phases) }
   }
 
   console.log(`\n${loaded.length - failed}/${loaded.length} sample projects passed`)
+  if (certify) {
+    const receipt = await record(FORGE, results, { claude: claudeVersion(), model: model ?? null })
+    const missing = all.filter(n => !receipt.samples[n])
+    console.log(`receipt: evals/receipt.json updated${missing.length ? `; not yet run against these files: ${missing.join(', ')}` : ''}`)
+  } else console.log('receipt: not updated (--yolo or --no-verify)')
   process.exit(failed ? 1 : 0)
 }
 

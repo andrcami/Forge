@@ -181,7 +181,7 @@ licence, Unicode smuggling, code risk, link integrity and quality, with a qualit
 | `architect` | ✅ pass | 89.8 (B) | 0 / 0 / 4 / 7 |
 | `build` | ✅ pass | 89.0 (B) | 0 / 0 / 5 / 8 |
 | `design` | ✅ pass | 84.8 (B) | 0 / 0 / 4 / 10 |
-| `harvest` | ✅ pass | 89.8 (B) | 0 / 0 / 4 / 7 |
+| `harvest` | ✅ pass | 91.5 (A) | 0 / 0 / 4 / 6 |
 | `lessons` | ✅ pass | 84.8 (B) | 0 / 0 / 4 / 10 |
 | `scope` | ✅ pass | 86.5 (B) | 0 / 0 / 4 / 9 |
 | `setup` | ✅ pass | 90.2 (A) | 0 / 0 / 6 / 7 |
@@ -305,10 +305,16 @@ npm test        # vitest
 npm run verify  # typecheck + test
 npm run forge -- lessons list   # the CLI, from the repo
 npm run eval    # framework QA: run the phases on the sample projects (uses claude -p)
+npm run eval:receipt            # do the committed eval results cover these files?
+claude plugin eval .            # with and without Forge: the score difference
 ```
 
-Run `npm run eval` before merging any change to `skills/` or `references/`. The
-sample projects and what each one proves are described in `evals/README.md`.
+The evals run locally, through your own Claude Code, and record their results in
+`evals/receipt.json`. CI fails a change to `skills/`, `references/`, `hooks/` or
+the eval samples until a receipt shows every sample passed against exactly those
+files. In Claude Code, the repository's `run-evals` skill runs them for you. The
+samples, the receipt and the with/without cases are described in
+`evals/README.md`.
 
 ## Design
 

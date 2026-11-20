@@ -274,13 +274,33 @@ describe('checkProject — harvest', () => {
     expect(f.some(x => x.check === 'unchanged' && /CLAUDE\.md was changed/.test(x.message))).toBe(true)
   })
 
+  it('checks that a merged lesson answers to every id it folded in', async () => {
+    const merged = { ...harvest, expect: { ...harvest.expect, library: { lessons: [
+      { match: 'busy', idOrAlias: ['busy', 'busy-again'], why: 'merge keeps old ids' }] } } }
+    await goodHarvest()
+    expect((await checkProject(dir, merged, FORGE)).map(f => f.message))
+      .toContainEqual(expect.stringMatching(/busy does not answer to busy-again \(aliases: none\)/))
+    await put('lib/busy.md', lesson('busy', 'Set a busy timeout.', { aliases: ['busy-again'] }))
+    expect(await checkProject(dir, merged, FORGE)).toEqual([])
+  })
+
+  it('runs dedupe and sync samples like a harvest, and only a harvest needs a branch', () => {
+    for (const phase of ['dedupe', 'sync'] as const) {
+      const e = { ...harvest, phases: [phase], harness: {} } as HarvestExpectation
+      expect(isHarvest(e)).toBe(true)
+      expect(validateExpectation(e)).toEqual([])
+      expect(validateExpectation({ ...e, phases: [phase, 'scope'] } as never).join()).toMatch(new RegExp(`runs ${phase} alone`))
+    }
+  })
+
   it('reports a workspace without a library as a harness problem', async () => {
     expect((await checkProject(dir, harvest, FORGE)).map(f => f.check)).toContain('harness')
   })
 
   it('validates a harvest expectation', () => {
     expect(validateExpectation(harvest)).toEqual([])
-    expect(validateExpectation({ ...harvest, harness: {} }).join()).toMatch(/harness.branch needs name and message/)
+    expect(validateExpectation({ ...harvest, harness: {} }).join()).toMatch(/a harvest sample needs harness.branch/)
+    expect(validateExpectation({ ...harvest, harness: { branch: { name: 'b' } } as never }).join()).toMatch(/harness.branch needs name and message/)
     expect(validateExpectation({ ...harvest, phases: ['harvest', 'scope'] }).join()).toMatch(/runs harvest alone/)
     const noLib = { ...harvest, expect: { ...harvest.expect, library: undefined } }
     expect(validateExpectation(noLib).join()).toMatch(/expect.library missing/)
@@ -309,7 +329,7 @@ describe('sample projects', async () => {
     })
   }
 
-  it('together cover every size class, UI and no-UI, an escalation, a run with external design skills, and the harvest', async () => {
+  it('together cover every size class, UI and no-UI, an escalation, a run with external design skills, and every library command', async () => {
     const every: Expectation[] = await Promise.all(names.map(async n =>
       JSON.parse(await readFile(join(root, n, 'expect.json'), 'utf8'))))
     const all = every.filter((e): e is PhaseExpectation => !isHarvest(e))
@@ -323,5 +343,10 @@ describe('sample projects', async () => {
     const harvests = every.filter(isHarvest)
     expect(harvests.some(e => e.expect.library.lessons?.some(l => l.status === 'confirmed'))).toBe(true)
     expect(harvests.some(e => e.expect.unchanged?.length)).toBe(true)
+    // a harvest that must find an existing lesson by meaning and reuse its id
+    expect(harvests.some(e => e.phases[0] === 'harvest' && e.harness.branchFrom)).toBe(true)
+    // dedupe keeps the ids it merges; sync brings an existing project up to date
+    expect(harvests.some(e => e.phases[0] === 'dedupe' && e.expect.library.lessons?.some(l => l.idOrAlias?.length))).toBe(true)
+    expect(harvests.some(e => e.phases[0] === 'sync' && e.expect.notContains?.length)).toBe(true)
   })
 })

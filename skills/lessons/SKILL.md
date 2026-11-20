@@ -85,9 +85,14 @@ Sync writes only to the project's skills. It never writes to the library.
 
 Find lessons that state the same rule and fold each group into one.
 
-1. `forge lessons similar` lists pairs of active lessons with a similarity score
-   from 0 to 1, best first. The default cut-off is 0.35. Use `--min 0.25` to look
-   wider, and `--tag`/`--stack` to dedupe one area at a time.
+1. Find candidates two ways, because each misses what the other finds:
+   - `forge lessons similar` lists pairs of active lessons with a similarity
+     score from 0 to 1, best first. The default cut-off is 0.35. Use `--min 0.25`
+     to look wider, and `--tag`/`--stack` to dedupe one area at a time.
+   - The score counts shared words, so it misses one rule told in other words
+     ("timeout" and "deadline"). For each `skill:` tag that `forge lessons tags`
+     lists, run `forge lessons list --tag skill:<name> --status confirmed --status observed`
+     and read the rules in that group side by side.
 2. The score only finds candidates. Read both lessons (`forge lessons read <id>`)
    and decide: **same rule** (merge), **one rule is a special case of the other**
    (usually keep both, and make the narrower one say so), or **different rules
