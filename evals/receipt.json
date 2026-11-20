@@ -3,6 +3,26 @@
   "claude": "2.1.329",
   "model": null,
   "samples": {
+    "bakery-landing": {
+      "passed": true,
+      "ranAt": "2026-11-20T07:01:58.875Z",
+      "costUsd": 3.37
+    },
+    "bookclub-picks": {
+      "passed": true,
+      "ranAt": "2026-11-20T07:17:06.847Z",
+      "costUsd": 4.49
+    },
+    "clinic-booking": {
+      "passed": true,
+      "ranAt": "2026-11-20T07:47:40.520Z",
+      "costUsd": 5.91
+    },
+    "csv-dedupe": {
+      "passed": true,
+      "ranAt": "2026-11-20T06:40:54.694Z",
+      "costUsd": 1.33
+    },
     "harvest-lessons": {
       "passed": true,
       "ranAt": "2026-11-20T06:34:39.604Z",
@@ -27,6 +47,21 @@
       "passed": true,
       "ranAt": "2026-11-20T06:37:11.652Z",
       "costUsd": 0.29
+    },
+    "realtime-contradiction": {
+      "passed": false,
+      "ranAt": "2026-11-20T06:51:12.191Z",
+      "costUsd": 0.99
+    },
+    "studio-membership": {
+      "passed": true,
+      "ranAt": "2026-11-20T07:29:40.928Z",
+      "costUsd": 3.85
+    },
+    "webhook-relay": {
+      "passed": true,
+      "ranAt": "2026-11-20T06:48:49.972Z",
+      "costUsd": 2.48
     }
   }
 }
