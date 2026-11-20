@@ -89,6 +89,10 @@ before the first feature does.
   tests from this table
 - **Binding rules** — one per architecture decision with a failure mode, naming
   the integration test that guards it
+- **Riskiest assumptions** — one row per riskiest assumption in the scope,
+  quoting it word for word, with what fails if it is wrong and the test that
+  guards it. When no test can prove it (it depends on another team, say), name
+  the test that limits the damage and the check made by hand before launch
 - **UI/UX checks**, when UI is in scope — Playwright e2e plus the accessibility,
   keyboard, visual-regression, and reduced-motion checks from
   `references/qa/playwright.md`, at the breakpoints and themes `DESIGN.md` names,
