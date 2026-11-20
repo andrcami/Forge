@@ -224,7 +224,7 @@ async function buildBranch(workspace: string, name: string, exp: HarvestExpectat
   const git = (...a: string[]) => execFileSync('git',
     ['-c', 'user.name=Forge Eval', '-c', 'user.email=eval@forge.invalid', '-c', 'commit.gpgsign=false', ...a],
     { cwd: workspace, stdio: 'ignore' })
-  await cp(join(PROJECTS, exp.harness.seedFrom ?? name, 'seed'), workspace, { recursive: true })
+  await cp(join(PROJECTS, exp.harness?.seedFrom ?? name, 'seed'), workspace, { recursive: true })
   const ownLib = join(PROJECTS, name, 'lib')
   if (await access(ownLib).then(() => true, () => false)) {
     await rm(join(workspace, 'lib'), { recursive: true, force: true })
@@ -234,10 +234,10 @@ async function buildBranch(workspace: string, name: string, exp: HarvestExpectat
   await writeFile(join(workspace, '.git', 'info', 'exclude'), 'docs/eval/\n')
   git('add', '-A')
   git('commit', '-q', '-m', 'Initial state')
-  const branch = exp.harness.branch
+  const branch = exp.harness?.branch
   if (branch) {
     git('checkout', '-q', '-b', branch.name)
-    await cp(join(PROJECTS, exp.harness.branchFrom ?? name, 'branch'), workspace, { recursive: true })
+    await cp(join(PROJECTS, exp.harness?.branchFrom ?? name, 'branch'), workspace, { recursive: true })
     git('add', '-A')
     git('commit', '-q', '-m', branch.message)
   }
@@ -296,21 +296,27 @@ async function main() {
   let failed = 0
   for (const [name, { brief, exp }] of loaded) {
     const workspace = await mkdtemp(join(tmpdir(), `forge-eval-${name}-`))
-    await mkdir(join(workspace, 'docs', 'eval'), { recursive: true })
-    await writeFile(join(workspace, 'docs', 'eval', 'brief.md'), brief)
-    const pins = isHarvest(exp) ? [] : exp.harness?.plugins ?? []
-    if (isHarvest(exp)) await buildBranch(workspace, name, exp)
-    else await cp(join(PROJECTS, name, 'seed'), workspace, { recursive: true }).catch(() => {})
+    let ok: boolean
+    try {
+      await mkdir(join(workspace, 'docs', 'eval'), { recursive: true })
+      await writeFile(join(workspace, 'docs', 'eval', 'brief.md'), brief)
+      const pins = isHarvest(exp) ? [] : exp.harness?.plugins ?? []
+      if (isHarvest(exp)) await buildBranch(workspace, name, exp)
+      else await cp(join(PROJECTS, name, 'seed'), workspace, { recursive: true }).catch(() => {})
 
-    const plugins = await Promise.all(pins.map(ensurePlugin))
-    console.log(`\n▶ ${name}: ${exp.phases.join(' → ')}${pins.length ? ` (with ${pins.map(p => p.name).join(', ')})` : ''}`)
-    for (const phase of exp.phases) {
-      process.stdout.write(`  ${phase}… `)
-      const code = await runPhase(workspace, phase, { yolo: flag('--yolo'), model, plugins })
-      console.log(code === 0 ? 'done' : `exited ${code}`)
+      const plugins = await Promise.all(pins.map(ensurePlugin))
+      console.log(`\n▶ ${name}: ${exp.phases.join(' → ')}${pins.length ? ` (with ${pins.map(p => p.name).join(', ')})` : ''}`)
+      for (const phase of exp.phases) {
+        process.stdout.write(`  ${phase}… `)
+        const code = await runPhase(workspace, phase, { yolo: flag('--yolo'), model, plugins })
+        console.log(code === 0 ? 'done' : `exited ${code}`)
+      }
+      if (!isHarvest(exp) && exp.phases.includes('build') && !flag('--no-verify')) await verifyBuild(workspace, exp)
+      ok = report(name, exp, await checkProject(workspace, exp, FORGE), workspace)
+    } catch (e) {
+      // one sample's broken setup is that sample's failure: the others still run and are recorded
+      ok = report(name, exp, [{ check: 'harness', message: `the runner failed: ${(e as Error).message}` }], workspace)
     }
-    if (!isHarvest(exp) && exp.phases.includes('build') && !flag('--no-verify')) await verifyBuild(workspace, exp)
-    const ok = report(name, exp, await checkProject(workspace, exp, FORGE), workspace)
     if (!ok) failed++
     results[name] = { passed: ok, ranAt: new Date().toISOString(), costUsd: await runCost(workspace, exp.phases) }
   }
