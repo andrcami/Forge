@@ -42,6 +42,7 @@ async function goodApiWorkspace() {
   await put('docs/forge/state.json', JSON.stringify({
     phase: 'build', sizeClass: 'tool', hasUI: false,
     approvals: { scope: '2026-10-14T10:00:00Z', architecture: '2026-10-14T11:00:00Z' }, escalation: null,
+    execution: { parallel: false, maxAgents: 1, decided: '2026-10-14T12:00:00Z' },
   }))
   await put('docs/forge/scope.md', filled(scopeTpl).replace('## First release',
     '## First release\n\n| Flow | v1 | Later |\n|---|---|---|\n| receive | ✓ | |\n| deliver | ✓ | |\n| replay | | ✓ |'))
@@ -133,6 +134,19 @@ describe('checkProject', () => {
     expect(msgs).toContain('unexpected skill frontend')
     expect(msgs).toContain('expected skill backend')
     expect(msgs.some(m => m.includes('lacks /signature/'))).toBe(true)
+  })
+
+  it('requires the build handoff to record how the plan runs: parallel agents or one at a time', async () => {
+    await goodApiWorkspace()
+    const state = JSON.parse(await readFile(join(dir, 'docs/forge/state.json'), 'utf8'))
+    const msgs = async () => (await checkProject(dir, apiTool, FORGE)).filter(f => f.check === 'build.execution').map(f => f.message)
+    expect(await msgs()).toEqual([])
+    await put('docs/forge/state.json', JSON.stringify({ ...state, execution: undefined }))
+    expect((await msgs()).join()).toMatch(/no execution choice/)
+    await put('docs/forge/state.json', JSON.stringify({ ...state, execution: { parallel: false, maxAgents: 3 } }))
+    expect((await msgs()).join()).toMatch(/one at a time, but maxAgents is 3/)
+    await put('docs/forge/state.json', JSON.stringify({ ...state, execution: { parallel: true, maxAgents: 3 } }))
+    expect(await msgs()).toEqual([])
   })
 
   it('requires Playwright when a non-throwaway project has UI', async () => {

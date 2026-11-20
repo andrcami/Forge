@@ -314,6 +314,13 @@ async function checkPhases(dir: string, exp: PhaseExpectation, forgeRoot: string
     for (const rel of ['CLAUDE.md', 'docs/context/status.md', 'docs/context/decisions.md']) {
       if (!(await has(rel))) fail('build', `${rel} missing`)
     }
+    // the handoff asked how the plan runs, and recorded the answer
+    const execution = state.execution
+    if (!execution || typeof execution.parallel !== 'boolean' || !Number.isInteger(execution.maxAgents) || execution.maxAgents < 1) {
+      fail('build.execution', `state.json has no execution choice (parallel agents or one at a time): ${JSON.stringify(execution ?? null)}`)
+    } else if (!execution.parallel && execution.maxAgents !== 1) {
+      fail('build.execution', `one at a time, but maxAgents is ${execution.maxAgents}`)
+    }
     const playwright = (await has('playwright.config.ts')) || (await has('playwright.config.js')) ||
       (await has('pytest.ini') && /playwright/i.test((await readIf(join(dir, 'pytest.ini'))) ?? ''))
     const uiBuild = ex.hasUI && ex.sizeClass !== 'throwaway'

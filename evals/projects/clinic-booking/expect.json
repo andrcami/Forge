@@ -88,6 +88,11 @@
         "file": ".claude/skills/qa/SKILL.md",
         "pattern": "remind",
         "why": "the reminder flow is in v1 and must be mapped to a test"
+      },
+      {
+        "file": "docs/forge/state.json",
+        "pattern": "\"parallel\"\\s*:\\s*true",
+        "why": "the user chose parallel agents at the build handoff, and the choice is recorded for the plan"
       }
     ],
     "notContains": [

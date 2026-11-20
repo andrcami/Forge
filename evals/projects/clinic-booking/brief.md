@@ -30,6 +30,7 @@ public page that converts visitors into bookings. We sell it to clinics as SaaS.
 - **Tenancy:** multi-tenant — one clinic must never see another's patients.
 - **Data:** relational with real invariants (no double-booking a slot).
 - **Size:** product.
+- **How the plan runs:** parallel agents, up to 3 at once.
 
 ## Approvals
 

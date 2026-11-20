@@ -42,8 +42,10 @@ an automated test of the Forge plugin itself.
 - Follow the skill exactly otherwise — including refusing to run when its gate
   says so, and raising an escalation when its triggers fire. A refusal is a
   correct outcome, not a failure; state it and stop.
-- At the build phase's terminal handoff, state which planning path you would
-  take, and stop. Do not write an implementation plan.
+- At the build phase's terminal handoff, answer its parallel-agents question
+  as the brief says (one at a time when the brief does not say), record it as
+  the skill describes, state which planning path you would take, and stop. Do
+  not write an implementation plan.
 - Install nothing globally. Keep every file inside this directory, temp files
   included.
 - Run one command per Bash call where you can: chained commands are more

@@ -41,7 +41,7 @@ What it gives you:
 | `/forge:scope` | 1 — Scope (product) | `docs/forge/scope.md`: problem, users, first release, riskiest assumptions, surfaces, size class |
 | `/forge:architect` | 2 — Architecture | `docs/forge/architecture.md`, stack decision |
 | `/forge:design` | 3 — Design (UI only) | `DESIGN.md`, visual + motion direction, lead design skills |
-| `/forge:build` | 4 — Build | generated skills (incl. design-system, qa, security), test harness incl. Playwright, `docs/context/`, `CLAUDE.md` |
+| `/forge:build` | 4 — Build | generated skills (incl. design-system, qa, security), test harness incl. Playwright, `docs/context/`, `CLAUDE.md`; asks whether the plan runs with parallel agents or one at a time |
 | `/forge:harvest` | ongoing | lessons folded back into skills and the library |
 | `/forge:lessons` | ongoing | import, list, retire, purge |
 
