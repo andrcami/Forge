@@ -14,6 +14,7 @@
  */
 import { spawn, execFileSync } from 'node:child_process'
 import { access, cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { readdirSync, readlinkSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -131,10 +132,11 @@ function runPhase(cwd: string, phase: string, opts: { yolo: boolean; model?: str
   return new Promise((res, rej) => {
     // the eval tests the phases: not whether this checkout is the newest release, nor the chat-style offer
     const env = { ...process.env, FORGE_NO_UPDATE_CHECK: '1', FORGE_EVAL: '1' }
-    const child = spawn(claudeBin(), args, { cwd, env, stdio: ['ignore', 'pipe', 'inherit'] })
+    const child = spawn(claudeBin(), args, { cwd, env, detached: true, stdio: ['ignore', 'pipe', 'inherit'] })
     let stdout = ''
     child.stdout.on('data', d => { stdout += d })
     child.on('error', rej)
+    child.on('exit', () => reap(cwd, child.pid))
     child.on('close', async code => {
       await writeFile(join(cwd, 'docs', 'eval', `transcript-${phase}.json`), stdout)
       res(code ?? 1)
@@ -142,13 +144,37 @@ function runPhase(cwd: string, phase: string, opts: { yolo: boolean; model?: str
   })
 }
 
+/**
+ * Kills what a phase or verify command left running: its process group, and (on
+ * Linux) any other process whose working directory is in the workspace, which
+ * catches a server the nested session started in a group of its own. Otherwise it
+ * holds its port, and the next sample's Playwright webServer refuses to start.
+ */
+function reap(workspace: string, pid: number | undefined): void {
+  if (pid) try { process.kill(-pid, 'SIGKILL') } catch { /* group already gone */ }
+  try { workspace = realpathSync(workspace) } catch { return }
+  let pids: string[]
+  try { pids = readdirSync('/proc').filter(p => /^\d+$/.test(p)) } catch { return } // no /proc: macOS
+  for (const p of pids) {
+    if (Number(p) === process.pid) continue
+    try {
+      const dir = readlinkSync(`/proc/${p}/cwd`)
+      if (dir === workspace || dir.startsWith(workspace + '/')) process.kill(Number(p), 'SIGKILL')
+    } catch { /* gone, or not ours to read */ }
+  }
+}
+
 function sh(cwd: string, command: string): Promise<VerifyStep> {
   return new Promise(res => {
-    const child = spawn('sh', ['-c', command], { cwd, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, CI: '1' } })
+    // its own process group, killed whole when the command ends: a dev server that
+    // Playwright's webServer starts can outlive the run and hold the port the next
+    // sample's tests need
+    const child = spawn('sh', ['-c', command], { cwd, detached: true, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, CI: '1' } })
     let out = ''
     child.stdout.on('data', d => { out += d })
     child.stderr.on('data', d => { out += d })
-    const timer = setTimeout(() => child.kill('SIGKILL'), VERIFY_TIMEOUT_MS)
+    const timer = setTimeout(() => reap(cwd, child.pid), VERIFY_TIMEOUT_MS)
+    child.on('exit', () => reap(cwd, child.pid))
     child.on('close', code => {
       clearTimeout(timer)
       res({ command, code: code ?? 124, tail: out.split('\n').slice(-40).join('\n') })

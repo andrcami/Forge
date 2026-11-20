@@ -1,67 +1,67 @@
 {
-  "digest": "0cfa4c88d41bc67aecbfb125f5386644a6a95a0f059f157eeb8fae33e51da0ae",
+  "digest": "2b504f288c55acd384426db071bd97d3cc2754386e3f86560aad6adb0ce7c77d",
   "claude": "2.1.329",
   "model": null,
   "samples": {
     "bakery-landing": {
       "passed": true,
-      "ranAt": "2026-11-20T10:55:46.043Z",
-      "costUsd": 4.07
+      "ranAt": "2026-11-20T15:16:33.589Z",
+      "costUsd": 4.25
     },
     "bookclub-picks": {
       "passed": true,
-      "ranAt": "2026-11-20T11:09:12.138Z",
-      "costUsd": 4.16
+      "ranAt": "2026-11-20T15:30:35.723Z",
+      "costUsd": 4.01
     },
     "clinic-booking": {
       "passed": true,
-      "ranAt": "2026-11-20T11:25:04.615Z",
-      "costUsd": 4.77
+      "ranAt": "2026-11-20T15:46:21.350Z",
+      "costUsd": 4.39
     },
     "csv-dedupe": {
       "passed": true,
-      "ranAt": "2026-11-20T11:27:58.009Z",
-      "costUsd": 1.2
+      "ranAt": "2026-11-20T15:49:19.618Z",
+      "costUsd": 1.22
     },
     "harvest-lessons": {
       "passed": true,
-      "ranAt": "2026-11-20T11:29:22.182Z",
-      "costUsd": 0.5
+      "ranAt": "2026-11-20T15:50:37.026Z",
+      "costUsd": 0.49
     },
     "harvest-quiet": {
       "passed": true,
-      "ranAt": "2026-11-20T11:29:43.133Z",
-      "costUsd": 0.21
+      "ranAt": "2026-11-20T15:50:56.938Z",
+      "costUsd": 0.23
     },
     "harvest-reuse-id": {
       "passed": true,
-      "ranAt": "2026-11-20T11:30:46.851Z",
-      "costUsd": 0.44
+      "ranAt": "2026-11-20T15:51:48.267Z",
+      "costUsd": 0.43
     },
     "lessons-dedupe": {
       "passed": true,
-      "ranAt": "2026-11-20T11:31:38.991Z",
+      "ranAt": "2026-11-20T15:52:31.107Z",
       "costUsd": 0.33
     },
     "lessons-sync": {
       "passed": true,
-      "ranAt": "2026-11-20T11:32:13.223Z",
-      "costUsd": 0.3
+      "ranAt": "2026-11-20T15:53:05.925Z",
+      "costUsd": 0.33
     },
     "realtime-contradiction": {
-      "passed": false,
-      "ranAt": "2026-11-20T11:48:01.563Z",
-      "costUsd": 4.54
+      "passed": true,
+      "ranAt": "2026-11-20T15:55:23.758Z",
+      "costUsd": 0.98
     },
     "studio-membership": {
       "passed": false,
-      "ranAt": "2026-11-20T12:01:27.663Z",
-      "costUsd": 3.9
+      "ranAt": "2026-11-20T16:10:57.396Z",
+      "costUsd": 4.43
     },
     "webhook-relay": {
       "passed": true,
-      "ranAt": "2026-11-20T12:10:09.846Z",
-      "costUsd": 2.57
+      "ranAt": "2026-11-20T16:18:44.066Z",
+      "costUsd": 2.35
     }
   }
 }
