@@ -178,7 +178,7 @@ licence, Unicode smuggling, code risk, link integrity and quality, with a qualit
 
 | Skill | Verdict | Quality / 100 | Findings (critical / high / medium / low) |
 |---|---|---|---|
-| `architect` | ✅ pass | 89.8 (B) | 0 / 0 / 4 / 7 |
+| `architect` | ✅ pass | 91.5 (A) | 0 / 0 / 4 / 6 |
 | `build` | ✅ pass | 89.0 (B) | 0 / 0 / 5 / 8 |
 | `design` | ✅ pass | 84.8 (B) | 0 / 0 / 4 / 10 |
 | `harvest` | ✅ pass | 91.5 (A) | 0 / 0 / 4 / 6 |
