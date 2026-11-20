@@ -79,6 +79,36 @@ describe('checkProject', () => {
     expect(checks).toContain('state.approvals')
   })
 
+  it('passes when an anyOf outcome holds and the base does not', async () => {
+    await goodApiWorkspace()
+    const either: PhaseExpectation = {
+      ...apiTool,
+      expect: { ...apiTool.expect, approvals: ['scope'], escalation: { owner: 'scope' } },
+      anyOf: [{ name: 'built', approvals: ['scope', 'architecture'], escalation: null }],
+    }
+    expect(validateExpectation(either)).toEqual([])
+    expect(await checkProject(dir, either, FORGE)).toEqual([])
+  })
+
+  it('reports every outcome, by name, when none holds', async () => {
+    await goodApiWorkspace()
+    const neither: PhaseExpectation = {
+      ...apiTool,
+      expect: { ...apiTool.expect, approvals: ['scope'], escalation: { owner: 'scope' } },
+      anyOf: [{ name: 'built', sizeClass: 'product' }],
+    }
+    const checks = (await checkProject(dir, neither, FORGE)).map(f => f.check)
+    expect(checks).toContain('expect:state.escalation')
+    expect(checks).toContain('built:state.sizeClass')
+  })
+
+  it('rejects an anyOf outcome without a name or with an invalid field', () => {
+    expect(validateExpectation({ ...apiTool, anyOf: [] })).toContain('anyOf must be a non-empty list')
+    expect(validateExpectation({ ...apiTool, anyOf: [{ sizeClass: 'tool' } as any] })).toContain('each anyOf outcome needs a name')
+    expect(validateExpectation({ ...apiTool, anyOf: [{ name: 'x', sizeClass: 'huge' as any }] }))
+      .toContain('anyOf "x": expect.sizeClass invalid')
+  })
+
   it('catches a DESIGN.md the design phase should have refused to write', async () => {
     await goodApiWorkspace()
     await put('DESIGN.md', '# design')

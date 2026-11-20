@@ -48,6 +48,13 @@ export interface PhaseExpectation {
     /** null: no escalation may be open. An object: one must be, owned by this phase. */
     escalation: null | { owner: 'scope' | 'architecture' | 'design' }
   }
+  /**
+   * Other acceptable outcomes. Each is laid over `expect` (its fields replace
+   * the base's) and the sample passes when `expect` or any of these holds in
+   * full. For a sample where Forge may rightly catch a problem in more than one
+   * phase.
+   */
+  anyOf?: Array<Partial<PhaseExpectation['expect']> & { name: string }>
 }
 
 /** A lesson the library must hold after a harvest. */
@@ -134,6 +141,15 @@ export function validateExpectation(e: unknown): string[] {
   }
   const ex = (x as PhaseExpectation).expect
   if (!ex) return [...errs, 'expect missing']
+  const alts = (x as PhaseExpectation).anyOf
+  if (alts !== undefined) {
+    if (!Array.isArray(alts) || alts.length === 0) return [...errs, 'anyOf must be a non-empty list']
+    for (const a of alts) {
+      if (!a || typeof a.name !== 'string' || !a.name) { errs.push('each anyOf outcome needs a name'); continue }
+      const { name, ...rest } = a
+      errs.push(...validateExpectation({ ...x, anyOf: undefined, expect: { ...ex, ...rest } }).map(e => `anyOf "${name}": ${e}`))
+    }
+  }
   if (!['throwaway', 'tool', 'product'].includes(ex.sizeClass)) errs.push('expect.sizeClass invalid')
   if (typeof ex.hasUI !== 'boolean') errs.push('expect.hasUI must be boolean')
   if (!Array.isArray(ex.approvals) || ex.approvals.some(a => !APPROVALS.includes(a))) errs.push('expect.approvals invalid')
@@ -232,9 +248,22 @@ export async function checkProject(dir: string, exp: Expectation, forgeRoot: str
   const out: Finding[] = []
   const fail: Fail = (check, message) => { out.push({ check, message }) }
   if (isHarvest(exp)) await checkHarvest(dir, exp, fail)
+  else if (exp.anyOf?.length) return checkOutcomes(dir, exp, forgeRoot)
   else if (!(await checkPhases(dir, exp, forgeRoot, fail))) return out
   await checkContent(dir, exp.expect, fail)
   return out
+}
+
+/** Passes when the base outcome or any `anyOf` outcome holds; otherwise reports each one's findings. */
+async function checkOutcomes(dir: string, exp: PhaseExpectation, forgeRoot: string): Promise<Finding[]> {
+  const outcomes = [{ name: 'expect', over: {} }, ...exp.anyOf!.map(({ name, ...over }) => ({ name, over }))]
+  const all: Finding[] = []
+  for (const o of outcomes) {
+    const f = await checkProject(dir, { ...exp, anyOf: undefined, expect: { ...exp.expect, ...o.over } }, forgeRoot)
+    if (!f.length) return []
+    all.push(...f.map(x => ({ check: `${o.name}:${x.check}`, message: x.message })))
+  }
+  return all
 }
 
 type Fail = (check: string, message: string) => void

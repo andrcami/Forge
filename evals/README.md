@@ -47,7 +47,7 @@ samples a change touches to keep that usage small.
 | `bookclub-picks` | tool | app | Short design phase, motion lens, Playwright smoke + axe at tool scale, no cross-browser |
 | `bakery-landing` | tool | marketing | Fixed brand values survive into `DESIGN.md`; static site gets no backend or database |
 | `clinic-booking` | product | app + marketing | Full design with both surfaces, tenancy, EU residency, double-booking invariant, product-scale `qa` (WebKit, visual, keyboard) |
-| `realtime-contradiction` | product | app | A self-contradicting scope: architecture escalates to scope, and design and build refuse |
+| `realtime-contradiction` | product | app | A self-contradicting scope, caught before anything is built on it: architecture escalates to scope and design and build refuse, or scope cuts the impossible feature itself and says so (`anyOf`) |
 | `studio-membership` | tool | app + marketing | Runs **with the design skills installed**: ui-ux-pro-max leads the app, taste-skill the public page, design-motion-principles the motion. Its generated e2e suite is run too |
 | `harvest-lessons` | — | — | `/forge:harvest` on a branch with real lessons: a new portable lesson enters `observed` with a `skill:` tag, a second sighting promotes an existing lesson, a schema detail stays in the project skill, a rejected candidate is written nowhere, a rule whose reason the branch closed is pruned |
 | `harvest-quiet` | — | — | `/forge:harvest` on a branch with nothing to learn: the library and the skills stay byte-for-byte as they were |
@@ -195,9 +195,19 @@ asking, and to approve unless `## Approvals` says otherwise.
     "files":  { "present": ["DESIGN.md"], "absent": [] },
     "contains":    [{ "file": "DESIGN.md", "pattern": "regex", "why": "the rule this proves" }],
     "notContains": [{ "file": "…", "pattern": "…", "why": "…" }]
-  }
+  },
+  "anyOf": [                                             // optional: other acceptable outcomes
+    { "name": "scope-cut", "approvals": ["scope", "architecture", "design"], "escalation": null }
+  ]
 }
 ```
+
+`anyOf` is for a sample where Forge may rightly catch a problem in more than one
+phase. Each outcome is laid over `expect` (its fields replace the base's), and
+the sample passes when `expect` or any outcome holds in full. When none holds,
+the checker reports every outcome's findings, prefixed with its name (`expect:`
+for the base). Use it only when each outcome is correct behaviour, not to let a
+flaky phase through.
 
 ## What the checker verifies on every sample
 

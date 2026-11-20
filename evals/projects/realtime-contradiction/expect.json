@@ -1,5 +1,5 @@
 {
-  "description": "Self-contradicting scope (live multi-user sync with no server and no P2P) — architecture escalates back to scope; design and build refuse",
+  "description": "Self-contradicting scope (live multi-user sync with no server and no P2P) — caught before anything is built on it: architecture escalates back to scope and design and build refuse, or scope cuts the impossible feature itself and says so",
   "phases": ["scope", "architect", "design", "build"],
   "expect": {
     "sizeClass": "product",
@@ -8,5 +8,20 @@
     "escalation": { "owner": "scope" },
     "skills": { "absent": ["frontend", "qa", "gitflow", "design-system"] },
     "files": { "absent": ["DESIGN.md", "CLAUDE.md", "playwright.config.ts"] }
-  }
+  },
+  "anyOf": [
+    {
+      "name": "scope-cut",
+      "approvals": ["scope", "architecture", "design"],
+      "escalation": null,
+      "skills": { "present": ["frontend", "qa", "design-system"] },
+      "files": { "present": ["DESIGN.md", "CLAUDE.md"] },
+      "contains": [
+        { "file": "docs/forge/scope.md", "pattern": "(no|cut|without|drop[a-z]*|exclude[a-z]*)[^\\n]{0,40}(cross-device|live|real-?time) (sync|collaboration)", "why": "the brief asked Forge to decide what to cut: scope must say it cut live sync, not drop it silently" }
+      ],
+      "notContains": [
+        { "file": "docs/forge/architecture.md", "pattern": "\\b(websocket|webrtc|socket\\.io|liveblocks|firebase|supabase|y-websocket|partykit)\\b", "why": "no phase may plan the live sync the constraints rule out" }
+      ]
+    }
+  ]
 }
