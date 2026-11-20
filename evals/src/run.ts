@@ -184,6 +184,11 @@ export default {
 }
 `
 
+/** Points each `playwright test` in a command at the eval config, wherever it sits in a chain. */
+function evalPlaywright(command: string): string {
+  return command.replace(/playwright test\b/g, 'playwright test -c docs/eval/playwright.eval.config.ts')
+}
+
 /**
  * Runs the generated project's own commands from docs/forge/commands.json and
  * records the result in docs/eval/verify.json for the checker. A harness that
@@ -202,7 +207,9 @@ async function verifyBuild(cwd: string, exp: PhaseExpectation): Promise<void> {
     const nodePlaywright = await access(join(cwd, 'playwright.config.ts')).then(() => true, () => false)
     if (chromium && nodePlaywright && /playwright test/.test(command)) {
       await writeFile(join(cwd, 'docs', 'eval', 'playwright.eval.config.ts'), EVAL_PLAYWRIGHT_CONFIG)
-      command = `EVAL_CHROMIUM=${chromium} ${command} -c docs/eval/playwright.eval.config.ts`
+      // export, not a VAR=x prefix: the command can be a chain (`npm run build &&
+      // npx playwright test`), and a prefix reaches only its first command
+      command = `export EVAL_CHROMIUM=${JSON.stringify(chromium)}; ${evalPlaywright(command)}`
     }
     process.stdout.write(`  verify:${key}… `)
     steps[key] = await sh(cwd, command)
