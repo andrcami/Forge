@@ -1,67 +1,12 @@
 {
-  "digest": "6f4d5451d03ecb6230f72c2c800a14d38c827d347b50a2b68e585a2af8d3ea4a",
+  "digest": "388afaa5f712d625a05bcdcd0e3e790679eb2ef79dabe730be3387ba07c8a477",
   "claude": "2.1.329",
   "model": null,
   "samples": {
-    "bakery-landing": {
-      "passed": true,
-      "ranAt": "2026-11-20T07:01:58.875Z",
-      "costUsd": 3.37
-    },
-    "bookclub-picks": {
-      "passed": true,
-      "ranAt": "2026-11-20T07:17:06.847Z",
-      "costUsd": 4.49
-    },
-    "clinic-booking": {
-      "passed": true,
-      "ranAt": "2026-11-20T07:47:40.520Z",
-      "costUsd": 5.91
-    },
-    "csv-dedupe": {
-      "passed": true,
-      "ranAt": "2026-11-20T06:40:54.694Z",
-      "costUsd": 1.33
-    },
-    "harvest-lessons": {
-      "passed": true,
-      "ranAt": "2026-11-20T06:34:39.604Z",
-      "costUsd": 0.56
-    },
-    "harvest-quiet": {
-      "passed": true,
-      "ranAt": "2026-11-20T06:34:59.197Z",
-      "costUsd": 0.22
-    },
-    "harvest-reuse-id": {
-      "passed": true,
-      "ranAt": "2026-11-20T06:35:53.044Z",
-      "costUsd": 0.42
-    },
-    "lessons-dedupe": {
-      "passed": true,
-      "ranAt": "2026-11-20T06:36:42.081Z",
-      "costUsd": 0.36
-    },
-    "lessons-sync": {
-      "passed": true,
-      "ranAt": "2026-11-20T06:37:11.652Z",
-      "costUsd": 0.29
-    },
     "realtime-contradiction": {
-      "passed": false,
-      "ranAt": "2026-11-20T06:51:12.191Z",
-      "costUsd": 0.99
-    },
-    "studio-membership": {
       "passed": true,
-      "ranAt": "2026-11-20T07:29:40.928Z",
-      "costUsd": 3.85
-    },
-    "webhook-relay": {
-      "passed": true,
-      "ranAt": "2026-11-20T06:48:49.972Z",
-      "costUsd": 2.48
+      "ranAt": "2026-11-20T07:50:46.922Z",
+      "costUsd": 1
     }
   }
 }
