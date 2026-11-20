@@ -122,7 +122,8 @@ Stop and send work backward when:
 - A required asset does not exist and the direction depends on it → re-draw the
   direction, or **scope** if the asset was promised
 
-Write the escalation to `state.json`, as the architecture phase does.
+Write the escalation to `state.json` in the format the architecture skill gives,
+with `"from": "design"`.
 
 ## Next
 
