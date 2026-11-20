@@ -1,0 +1,32 @@
+{
+  "digest": "6f4d5451d03ecb6230f72c2c800a14d38c827d347b50a2b68e585a2af8d3ea4a",
+  "claude": "2.1.329",
+  "model": null,
+  "samples": {
+    "harvest-lessons": {
+      "passed": true,
+      "ranAt": "2026-11-20T06:34:39.604Z",
+      "costUsd": 0.56
+    },
+    "harvest-quiet": {
+      "passed": true,
+      "ranAt": "2026-11-20T06:34:59.197Z",
+      "costUsd": 0.22
+    },
+    "harvest-reuse-id": {
+      "passed": true,
+      "ranAt": "2026-11-20T06:35:53.044Z",
+      "costUsd": 0.42
+    },
+    "lessons-dedupe": {
+      "passed": true,
+      "ranAt": "2026-11-20T06:36:42.081Z",
+      "costUsd": 0.36
+    },
+    "lessons-sync": {
+      "passed": true,
+      "ranAt": "2026-11-20T06:37:11.652Z",
+      "costUsd": 0.29
+    }
+  }
+}
