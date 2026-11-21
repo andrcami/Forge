@@ -2,3 +2,4 @@ node_modules/
 dist/
 *.log
 evals/.cache/
+plugin-evals/results/

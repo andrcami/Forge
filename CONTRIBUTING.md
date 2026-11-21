@@ -21,12 +21,18 @@ npm run verify                      # typecheck + tests
 claude plugin validate --strict .claude-plugin/plugin.json
 ```
 
-If you changed anything in `skills/` or `references/`, also run the eval
-samples your change affects and paste the result in the PR:
+If you changed anything in `skills/`, `references/`, `hooks/` or `evals/`, run
+the eval samples and commit the receipt they write:
 
 ```bash
-npm run eval -- <sample>            # see evals/README.md
+npm run eval -- <sample>            # while you work: the samples your change touches
+npm run eval                        # before the PR merges: every sample, against the final files
+npm run eval:receipt                # what the receipt still misses
 ```
+
+CI fails the PR until `evals/receipt.json` shows every sample passed against
+exactly the files in it. In Claude Code, the `run-evals` skill does all of this.
+Never edit the receipt by hand.
 
 This uses your own Claude Code session, which counts against your plan's usage.
 
@@ -51,6 +57,10 @@ artifact and run `npm run skills:readme -- <its folder>`.
 - **Bump the version** in `.claude-plugin/plugin.json` when installed copies need
   your change. The plugin cache is keyed by version.
 - **Keep PRs focused.** One concern per pull request.
+
+## Conduct
+
+Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Licence
 

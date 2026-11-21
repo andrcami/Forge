@@ -1,0 +1,63 @@
+{
+  "description": "Sync of an existing project: a new library lesson is added, a promoted one loses its suggestion mark, a merged id is renamed, a retired lesson is removed, another stack's lesson stays out, project lines and the library stay as they were",
+  "phases": [
+    "sync"
+  ],
+  "expect": {
+    "library": {
+      "count": 5
+    },
+    "unchanged": [
+      "lib/sqlite-busy-timeout.md",
+      "lib/sqlite-wal-for-concurrent-readers.md",
+      "lib/store-raw-payload.md",
+      "lib/sqlite-vacuum-nightly.md",
+      "lib/postgres-lock-timeout.md",
+      ".claude/skills/backend/SKILL.md"
+    ],
+    "contains": [
+      {
+        "file": ".claude/skills/database/SKILL.md",
+        "pattern": "library: sqlite-wal-for-concurrent-readers",
+        "why": "a confirmed lesson for this skill and stack is added"
+      },
+      {
+        "file": ".claude/skills/database/SKILL.md",
+        "pattern": "library: sqlite-busy-timeout",
+        "why": "the promoted lesson stays"
+      },
+      {
+        "file": ".claude/skills/database/SKILL.md",
+        "pattern": "library: store-raw-payload",
+        "why": "a line naming a merged id is renamed to the lesson's id"
+      },
+      {
+        "file": ".claude/skills/database/SKILL.md",
+        "pattern": "RFC 3339",
+        "why": "a project lesson with no library marker is left alone"
+      }
+    ],
+    "notContains": [
+      {
+        "file": ".claude/skills/database/SKILL.md",
+        "pattern": "suggest[^\\n]*library: sqlite-busy-timeout",
+        "why": "the lesson is confirmed now, so it is a rule, not a suggestion"
+      },
+      {
+        "file": ".claude/skills/database/SKILL.md",
+        "pattern": "library: keep-payload-bytes",
+        "why": "keep-payload-bytes is an alias now"
+      },
+      {
+        "file": ".claude/skills/database/SKILL.md",
+        "pattern": "sqlite-vacuum-nightly|VACUUM nightly",
+        "why": "a retired lesson is removed from the skill"
+      },
+      {
+        "file": ".claude/skills/database/SKILL.md",
+        "pattern": "postgres|lock_timeout",
+        "why": "a PostgreSQL lesson does not belong in a SQLite project"
+      }
+    ]
+  }
+}

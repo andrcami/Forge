@@ -1,0 +1,39 @@
+{
+  "description": "Harvest of a lesson the library already holds under another id and wording: the write reuses that id, so the lesson is confirmed instead of duplicated",
+  "phases": [
+    "harvest"
+  ],
+  "harness": {
+    "branch": {
+      "name": "delivery-hardening",
+      "message": "Harden delivery: raw-body signatures, busy timeout, backoff, client timeout, status index"
+    },
+    "seedFrom": "harvest-lessons",
+    "branchFrom": "harvest-lessons"
+  },
+  "expect": {
+    "library": {
+      "count": 1,
+      "style": true,
+      "lessons": [
+        {
+          "id": "hmac-over-received-bytes",
+          "match": "bytes",
+          "status": "confirmed",
+          "evidence": 2,
+          "why": "the library already knows this rule as hmac-over-received-bytes; found by searching, the harvest writes under that id, and a sighting in a second project confirms it"
+        }
+      ],
+      "absent": [
+        {
+          "pattern": "busy|sqlite",
+          "why": "the user rejected SQLite lessons for the library"
+        },
+        {
+          "pattern": "http\\.Client|client timeout",
+          "why": "the user rejected the http.Client lesson"
+        }
+      ]
+    }
+  }
+}

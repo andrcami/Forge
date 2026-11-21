@@ -88,7 +88,22 @@ silently.
 On trigger: stop, state the conflict concretely, name the phase that owns it,
 propose the smallest change that resolves it, and wait. Write the escalation to
 `state.json` so a resumed session sees the project is parked on a conflict rather
-than merely unfinished.
+than merely unfinished. Use exactly these fields, because every phase reads them:
+
+```json
+"escalation": {
+  "owner": "scope",
+  "from": "architecture",
+  "conflict": "<the requirements that cannot all hold, stated concretely>",
+  "proposal": "<the smallest change that resolves it>",
+  "raised": "<ISO timestamp>"
+}
+```
+
+`owner` is the phase that must change: `scope`, `architecture`, or `design`.
+`from` is the phase that found the conflict. Leave the rest of `state.json` as it
+is. The owning phase clears the escalation: once the user approves the change it
+proposes, it sets `escalation` to `null`.
 
 A recorded architecture revision is strong lesson material — harvest it.
 

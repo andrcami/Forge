@@ -42,6 +42,7 @@ async function goodApiWorkspace() {
   await put('docs/forge/state.json', JSON.stringify({
     phase: 'build', sizeClass: 'tool', hasUI: false,
     approvals: { scope: '2026-10-14T10:00:00Z', architecture: '2026-10-14T11:00:00Z' }, escalation: null,
+    execution: { parallel: false, maxAgents: 1, decided: '2026-10-14T12:00:00Z' },
   }))
   await put('docs/forge/scope.md', filled(scopeTpl).replace('## First release',
     '## First release\n\n| Flow | v1 | Later |\n|---|---|---|\n| receive | ✓ | |\n| deliver | ✓ | |\n| replay | | ✓ |'))
@@ -76,6 +77,36 @@ describe('checkProject', () => {
     const checks = (await checkProject(dir, apiTool, FORGE)).map(f => f.check)
     expect(checks).toContain('state.sizeClass')
     expect(checks).toContain('state.approvals')
+  })
+
+  it('passes when an anyOf outcome holds and the base does not', async () => {
+    await goodApiWorkspace()
+    const either: PhaseExpectation = {
+      ...apiTool,
+      expect: { ...apiTool.expect, approvals: ['scope'], escalation: { owner: 'scope' } },
+      anyOf: [{ name: 'built', approvals: ['scope', 'architecture'], escalation: null }],
+    }
+    expect(validateExpectation(either)).toEqual([])
+    expect(await checkProject(dir, either, FORGE)).toEqual([])
+  })
+
+  it('reports every outcome, by name, when none holds', async () => {
+    await goodApiWorkspace()
+    const neither: PhaseExpectation = {
+      ...apiTool,
+      expect: { ...apiTool.expect, approvals: ['scope'], escalation: { owner: 'scope' } },
+      anyOf: [{ name: 'built', sizeClass: 'product' }],
+    }
+    const checks = (await checkProject(dir, neither, FORGE)).map(f => f.check)
+    expect(checks).toContain('expect:state.escalation')
+    expect(checks).toContain('built:state.sizeClass')
+  })
+
+  it('rejects an anyOf outcome without a name or with an invalid field', () => {
+    expect(validateExpectation({ ...apiTool, anyOf: [] })).toContain('anyOf must be a non-empty list')
+    expect(validateExpectation({ ...apiTool, anyOf: [{ sizeClass: 'tool' } as any] })).toContain('each anyOf outcome needs a name')
+    expect(validateExpectation({ ...apiTool, anyOf: [{ name: 'x', sizeClass: 'huge' as any }] }))
+      .toContain('anyOf "x": expect.sizeClass invalid')
   })
 
   it('catches a DESIGN.md the design phase should have refused to write', async () => {
@@ -133,6 +164,19 @@ describe('checkProject', () => {
     expect(msgs).toContain('unexpected skill frontend')
     expect(msgs).toContain('expected skill backend')
     expect(msgs.some(m => m.includes('lacks /signature/'))).toBe(true)
+  })
+
+  it('requires the build handoff to record how the plan runs: parallel agents or one at a time', async () => {
+    await goodApiWorkspace()
+    const state = JSON.parse(await readFile(join(dir, 'docs/forge/state.json'), 'utf8'))
+    const msgs = async () => (await checkProject(dir, apiTool, FORGE)).filter(f => f.check === 'build.execution').map(f => f.message)
+    expect(await msgs()).toEqual([])
+    await put('docs/forge/state.json', JSON.stringify({ ...state, execution: undefined }))
+    expect((await msgs()).join()).toMatch(/no execution choice/)
+    await put('docs/forge/state.json', JSON.stringify({ ...state, execution: { parallel: false, maxAgents: 3 } }))
+    expect((await msgs()).join()).toMatch(/one at a time, but maxAgents is 3/)
+    await put('docs/forge/state.json', JSON.stringify({ ...state, execution: { parallel: true, maxAgents: 3 } }))
+    expect(await msgs()).toEqual([])
   })
 
   it('requires Playwright when a non-throwaway project has UI', async () => {
@@ -274,13 +318,33 @@ describe('checkProject — harvest', () => {
     expect(f.some(x => x.check === 'unchanged' && /CLAUDE\.md was changed/.test(x.message))).toBe(true)
   })
 
+  it('checks that a merged lesson answers to every id it folded in', async () => {
+    const merged = { ...harvest, expect: { ...harvest.expect, library: { lessons: [
+      { match: 'busy', idOrAlias: ['busy', 'busy-again'], why: 'merge keeps old ids' }] } } }
+    await goodHarvest()
+    expect((await checkProject(dir, merged, FORGE)).map(f => f.message))
+      .toContainEqual(expect.stringMatching(/busy does not answer to busy-again \(aliases: none\)/))
+    await put('lib/busy.md', lesson('busy', 'Set a busy timeout.', { aliases: ['busy-again'] }))
+    expect(await checkProject(dir, merged, FORGE)).toEqual([])
+  })
+
+  it('runs dedupe and sync samples like a harvest, and only a harvest needs a branch', () => {
+    for (const phase of ['dedupe', 'sync'] as const) {
+      const e = { ...harvest, phases: [phase], harness: {} } as HarvestExpectation
+      expect(isHarvest(e)).toBe(true)
+      expect(validateExpectation(e)).toEqual([])
+      expect(validateExpectation({ ...e, phases: [phase, 'scope'] } as never).join()).toMatch(new RegExp(`runs ${phase} alone`))
+    }
+  })
+
   it('reports a workspace without a library as a harness problem', async () => {
     expect((await checkProject(dir, harvest, FORGE)).map(f => f.check)).toContain('harness')
   })
 
   it('validates a harvest expectation', () => {
     expect(validateExpectation(harvest)).toEqual([])
-    expect(validateExpectation({ ...harvest, harness: {} }).join()).toMatch(/harness.branch needs name and message/)
+    expect(validateExpectation({ ...harvest, harness: {} }).join()).toMatch(/a harvest sample needs harness.branch/)
+    expect(validateExpectation({ ...harvest, harness: { branch: { name: 'b' } } as never }).join()).toMatch(/harness.branch needs name and message/)
     expect(validateExpectation({ ...harvest, phases: ['harvest', 'scope'] }).join()).toMatch(/runs harvest alone/)
     const noLib = { ...harvest, expect: { ...harvest.expect, library: undefined } }
     expect(validateExpectation(noLib).join()).toMatch(/expect.library missing/)
@@ -309,7 +373,7 @@ describe('sample projects', async () => {
     })
   }
 
-  it('together cover every size class, UI and no-UI, an escalation, a run with external design skills, and the harvest', async () => {
+  it('together cover every size class, UI and no-UI, an escalation, a run with external design skills, and every library command', async () => {
     const every: Expectation[] = await Promise.all(names.map(async n =>
       JSON.parse(await readFile(join(root, n, 'expect.json'), 'utf8'))))
     const all = every.filter((e): e is PhaseExpectation => !isHarvest(e))
@@ -323,5 +387,10 @@ describe('sample projects', async () => {
     const harvests = every.filter(isHarvest)
     expect(harvests.some(e => e.expect.library.lessons?.some(l => l.status === 'confirmed'))).toBe(true)
     expect(harvests.some(e => e.expect.unchanged?.length)).toBe(true)
+    // a harvest that must find an existing lesson by meaning and reuse its id
+    expect(harvests.some(e => e.phases[0] === 'harvest' && e.harness.branchFrom)).toBe(true)
+    // dedupe keeps the ids it merges; sync brings an existing project up to date
+    expect(harvests.some(e => e.phases[0] === 'dedupe' && e.expect.library.lessons?.some(l => l.idOrAlias?.length))).toBe(true)
+    expect(harvests.some(e => e.phases[0] === 'sync' && e.expect.notContains?.length)).toBe(true)
   })
 })

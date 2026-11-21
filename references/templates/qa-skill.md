@@ -18,6 +18,12 @@ binding decisions (`docs/forge/architecture.md`), and, when UI is in scope,
 <!-- Add one line per binding architecture decision that has a failure mode, naming
      the integration test that guards it (tenant isolation, idempotency, auth). -->
 
+## Riskiest assumptions
+
+| Assumption (scope, verbatim) | What fails if it is wrong | Guarded by |
+|---|---|---|
+| <assumption> | <failure> | `<test name>`, or "checked by hand before launch: <how>" |
+
 ## Layers in this repo
 
 | Layer | Runner | Lives in | Command |

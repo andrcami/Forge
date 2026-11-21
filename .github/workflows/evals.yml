@@ -1,0 +1,63 @@
+# Optional: run the eval samples in CI, billed to an API key.
+#
+# The usual path is local: the developer runs `npm run eval` in their own Claude
+# Code and commits evals/receipt.json, which ci.yml checks. This workflow is for
+# a second opinion on a clean machine. It does nothing until a repository secret
+# ANTHROPIC_API_KEY exists, and it never commits a receipt.
+#
+# Cost: about $0.60–$0.90 per sample without UI at API prices, more with UI.
+name: Evals
+on:
+  workflow_dispatch:
+    inputs:
+      samples:
+        description: Sample names separated by spaces; empty runs all of them
+        required: false
+        default: ''
+  schedule:
+    # Mondays, 05:17 UTC: catches a Claude Code or model change that breaks a phase
+    - cron: '17 5 * * 1'
+permissions:
+  contents: read
+concurrency:
+  group: evals
+  cancel-in-progress: false
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - name: Skip without an API key
+        id: key
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "No ANTHROPIC_API_KEY secret: evals run locally instead (see the run-evals skill)." >> "$GITHUB_STEP_SUMMARY"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.run == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.key.outputs.run == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.key.outputs.run == 'true'
+        run: npm ci
+      - name: Install Claude Code
+        if: steps.key.outputs.run == 'true'
+        run: npm install -g @anthropic-ai/claude-code@2.1.329
+      - name: Run the samples
+        if: steps.key.outputs.run == 'true'
+        env:
+          SAMPLES: ${{ inputs.samples }}
+        # SAMPLES is split on spaces on purpose: each word is one sample name
+        run: npm run eval -- $SAMPLES 2>&1 | tee eval.log; exit "${PIPESTATUS[0]}"
+        shell: bash
+      - name: Add the results to the summary
+        if: always() && steps.key.outputs.run == 'true'
+        run: |
+          { echo '```'; grep -E '^(PASS|FAIL)|^      \[|sample projects passed' eval.log || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

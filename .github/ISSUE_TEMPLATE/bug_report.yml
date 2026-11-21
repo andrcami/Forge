@@ -1,0 +1,25 @@
+name: Bug report
+description: A Forge phase, command or generated file did something wrong
+labels: [bug]
+body:
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part
+      options: [/forge:scope, /forge:architect, /forge:design, /forge:build, /forge:harvest or /forge:lessons, /forge:setup or install, forge CLI, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, and what you got. Use invented project details, never a real client's.
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Forge version (from .claude-plugin/plugin.json), Claude Code version, OS, and the stack the project uses
+    validations:
+      required: true

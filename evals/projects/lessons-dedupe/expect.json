@@ -1,0 +1,28 @@
+{
+  "description": "Dedupe: two lessons that state one rule in different words are merged with both ids kept; a lookalike that shares a word stays apart",
+  "phases": [
+    "dedupe"
+  ],
+  "expect": {
+    "library": {
+      "count": 3,
+      "style": true,
+      "lessons": [
+        {
+          "match": "HTTP",
+          "status": "confirmed",
+          "evidence": 2,
+          "idOrAlias": [
+            "http-client-timeout",
+            "outbound-calls-need-deadlines"
+          ],
+          "why": "the two HTTP timeout lessons are one rule: merged, the old ids kept as id or aliases, and evidence from two projects confirms it"
+        }
+      ]
+    },
+    "unchanged": [
+      "lib/sqlite-busy-timeout.md",
+      "lib/verify-webhook-raw-body.md"
+    ]
+  }
+}
