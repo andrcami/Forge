@@ -96,6 +96,11 @@ sits at the root because that is where Claude Design, Stitch, and other design
 agents look for it. Record why the winning direction won **and why each loser
 lost**.
 
+Keep every `##` heading exactly as the template writes it: the build phase, the
+generated skills and other design agents find sections by heading. A name for
+the direction ("The shop board") goes in the first line under `## Direction`,
+not in the heading.
+
 Append the binding design decisions to `docs/context/decisions.md`.
 
 The review gate names **what** must hold — breakpoints, themes, the

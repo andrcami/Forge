@@ -182,6 +182,10 @@ a generated `SKILL.md` or `CLAUDE.md`.
 
   Proving the harness runs means running these commands — at least `install`
   and `test` here, and the rest wherever the services and a browser exist
+- Fonts — when UI is in scope, the typefaces `DESIGN.md` names are bundled with
+  the repo (`next/font/local` with the files committed, or an `@fontsource`
+  package), never fetched from a font CDN at build time: a build that needs the
+  network fails in offline CI and whenever the CDN hiccups
 - Repo bones — `git init`, the branch model, a CI skeleton for the chosen stack
 - Test harness — each layer's runner configured and **proven to run**: one
   trivial passing test per layer, executed, so the first real test lands in a
