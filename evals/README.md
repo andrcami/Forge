@@ -47,14 +47,63 @@ samples a change touches to keep that usage small.
 | `bookclub-picks` | tool | app | Short design phase, motion lens, Playwright smoke + axe at tool scale, no cross-browser |
 | `bakery-landing` | tool | marketing | Fixed brand values survive into `DESIGN.md`; static site gets no backend or database |
 | `clinic-booking` | product | app + marketing | Full design with both surfaces, tenancy, EU residency, double-booking invariant, product-scale `qa` (WebKit, visual, keyboard) |
-| `realtime-contradiction` | product | app | A self-contradicting scope: architecture escalates to scope, and design and build refuse |
+| `realtime-contradiction` | product | app | A self-contradicting scope, caught before anything is built on it: architecture escalates to scope and design and build refuse, or scope cuts the impossible feature itself and says so (`anyOf`) |
 | `studio-membership` | tool | app + marketing | Runs **with the design skills installed**: ui-ux-pro-max leads the app, taste-skill the public page, design-motion-principles the motion. Its generated e2e suite is run too |
 | `harvest-lessons` | — | — | `/forge:harvest` on a branch with real lessons: a new portable lesson enters `observed` with a `skill:` tag, a second sighting promotes an existing lesson, a schema detail stays in the project skill, a rejected candidate is written nowhere, a rule whose reason the branch closed is pruned |
 | `harvest-quiet` | — | — | `/forge:harvest` on a branch with nothing to learn: the library and the skills stay byte-for-byte as they were |
+| `harvest-reuse-id` | — | — | `/forge:harvest` of a lesson the library already holds under another id and wording: the harvest finds it by searching and writes under that id, so it is confirmed, not duplicated |
+| `lessons-dedupe` | — | — | `/forge:lessons dedupe`: two lessons that state one rule in different words ("timeout", "deadline") are merged with both ids kept; a lookalike that only shares a word stays apart |
+| `lessons-sync` | — | — | `/forge:lessons sync` on an existing project: a new library lesson is added, a promoted one loses its suggestion mark, a merged id is renamed, a retired lesson is removed, another stack's lesson stays out, project lines and the library stay as they were |
 
 Together they cover every size class, UI and no UI, both design surfaces, the
-backward escalation path, the path with external design skills installed, and the harvest with and without lessons to fold in. A unit test enforces that coverage, so a sample
-can't be removed without it being noticed.
+backward escalation path, the path with external design skills installed, the
+harvest with and without lessons to fold in, and every library command (harvest,
+dedupe, sync). A unit test enforces that coverage, so a sample can't be removed
+without it being noticed.
+
+## The receipt: run locally, checked in CI
+
+The evals run on your machine, through your own Claude Code, so CI needs no
+model key. Each run records its results in `evals/receipt.json` under a digest
+of `skills/`, `references/`, `hooks/`, `evals/projects/` and `evals/src/`:
+everything that decides what Forge does and how it is graded. CI
+(`npm run eval:receipt`) recomputes the digest and fails a change whose receipt
+is for other files, or in which a sample is missing or failed.
+
+- Run samples in batches if you like: results against the same files add up.
+  A change to any digested file starts the receipt again.
+- `--yolo` and `--no-verify` runs don't update the receipt.
+- Commit `evals/receipt.json` with the change. Never edit it by hand: it is a
+  record that the evals passed, not a signature, and only honesty keeps it true.
+- In Claude Code, the repository's `run-evals` skill does this: it picks the
+  samples a change touches, runs them in the background, reads failures, and
+  commits the receipt once every sample passed.
+
+`.github/workflows/evals.yml` can also run the samples in CI, on demand or
+weekly, billed to an `ANTHROPIC_API_KEY` repository secret. Without the secret
+it does nothing. It never commits a receipt.
+
+## With and without Forge: `claude plugin eval`
+
+The samples check that Forge does what its instructions say. `plugin-evals/`
+asks a different question: does Claude do better with Forge than without it?
+Claude Code's built-in `claude plugin eval` runs each case with the plugin and
+without it, and reports the difference (Δ).
+
+```bash
+claude plugin eval .                                  # every case, 3 runs per arm
+claude plugin eval . --case portable-lesson-file --runs 1
+```
+
+| Case | What Forge should add |
+|---|---|
+| `portable-lesson-file` | An incident note becomes a valid library lesson: frontmatter, a `skill:` tag, evidence, and the rule first as a command of 20 words or fewer |
+| `portable-or-project` | Portable findings go to the library, schema details and design tokens stay in the project, trivia is dropped |
+| `architecture-tradeoffs` | Three candidates, each with a real weakness and its failure at 10× scale, and one recommendation grounded in the facts |
+
+A run costs a few cents a case (about $0.05 for one run of
+`portable-lesson-file`). Results go to `plugin-evals/results/`, which git
+ignores.
 
 ## Running the generated project
 
@@ -82,11 +131,14 @@ into `evals/.cache/plugins/` (gitignored) and loads it with `--plugin-dir`. A
 repo with skills but no plugin manifest gets a minimal one. To move a pin, update
 the SHA and re-run that sample.
 
-## Harvest samples
+## Library samples (harvest, dedupe, sync)
 
-A harvest sample runs `/forge:harvest` alone, on a git repo the runner builds:
-`seed/` is committed on `main`, then `branch/` is laid over it and committed on
-the branch `harness.branch` names (`seedFrom` borrows another sample's seed).
+A library sample runs one command alone (`/forge:harvest`, `/forge:lessons
+dedupe` or `/forge:lessons sync`), on a git repo the runner builds: `seed/` is
+committed on `main`, and a sample's own `lib/` replaces the seed's library. A
+harvest then lays `branch/` over it and commits it on the branch
+`harness.branch` names; dedupe and sync have no branch. `seedFrom` and
+`branchFrom` borrow another sample's seed or branch.
 The seed's `.forge.json` points the lesson library at `lib/` inside the
 workspace, so every write is visible to the checker, and turns the lesson
 checkpoint hooks off so they can't interfere. `docs/eval/` is kept out of git.
@@ -96,11 +148,12 @@ Its `expect.json` has no size class or approvals. Instead:
 ```jsonc
 {
   "phases": ["harvest"],
-  "harness": { "branch": { "name": "delivery-hardening", "message": "…" }, "seedFrom": "other-sample" },
+  "harness": { "branch": { "name": "delivery-hardening", "message": "…" }, "seedFrom": "other-sample", "branchFrom": "other-sample" },
   "expect": {
     "library": {
       "count": 2,                                            // exactly this many lessons
-      "lessons": [{ "match": "regex on the body", "id": "…", "status": "confirmed", "tags": ["skill:*"], "evidence": 2, "why": "…" }],
+      "lessons": [{ "match": "regex on the body", "id": "…", "status": "confirmed", "tags": ["skill:*"], "evidence": 2,
+                    "idOrAlias": ["ids the lesson must answer to, as its id or an alias"], "why": "…" }],
       "absent": [{ "pattern": "regex no lesson body may match", "why": "…" }],
       "style": true                                          // every lesson passes `forge lessons check`
     },
@@ -142,9 +195,19 @@ asking, and to approve unless `## Approvals` says otherwise.
     "files":  { "present": ["DESIGN.md"], "absent": [] },
     "contains":    [{ "file": "DESIGN.md", "pattern": "regex", "why": "the rule this proves" }],
     "notContains": [{ "file": "…", "pattern": "…", "why": "…" }]
-  }
+  },
+  "anyOf": [                                             // optional: other acceptable outcomes
+    { "name": "scope-cut", "approvals": ["scope", "architecture", "design"], "escalation": null }
+  ]
 }
 ```
+
+`anyOf` is for a sample where Forge may rightly catch a problem in more than one
+phase. Each outcome is laid over `expect` (its fields replace the base's), and
+the sample passes when `expect` or any outcome holds in full. When none holds,
+the checker reports every outcome's findings, prefixed with its name (`expect:`
+for the base). Use it only when each outcome is correct behaviour, not to let a
+flaky phase through.
 
 ## What the checker verifies on every sample
 

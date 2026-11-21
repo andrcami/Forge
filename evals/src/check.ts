@@ -48,6 +48,13 @@ export interface PhaseExpectation {
     /** null: no escalation may be open. An object: one must be, owned by this phase. */
     escalation: null | { owner: 'scope' | 'architecture' | 'design' }
   }
+  /**
+   * Other acceptable outcomes. Each is laid over `expect` (its fields replace
+   * the base's) and the sample passes when `expect` or any of these holds in
+   * full. For a sample where Forge may rightly catch a problem in more than one
+   * phase.
+   */
+  anyOf?: Array<Partial<PhaseExpectation['expect']> & { name: string }>
 }
 
 /** A lesson the library must hold after a harvest. */
@@ -61,20 +68,31 @@ export interface LibraryLesson {
   tags?: string[]
   /** how many evidence entries it must have */
   evidence?: number
+  /** ids the lesson must answer to, as its id or an alias: a merge keeps the ids it folded in */
+  idOrAlias?: string[]
 }
 
+/** The lesson-library commands a sample can run, each alone. */
+export const LIBRARY_PHASES = ['harvest', 'dedupe', 'sync'] as const
+export type LibraryPhase = typeof LIBRARY_PHASES[number]
+
 /**
- * What a project should look like after `/forge:harvest` ran on a feature
- * branch. The runner builds the branch: `seed/` committed on main, then
- * `branch/` laid over it and committed on `harness.branch.name`.
+ * What a project should look like after a lesson-library command ran in it:
+ * `/forge:harvest` on a feature branch, `/forge:lessons dedupe`, or
+ * `/forge:lessons sync`. The runner builds the repo: `seed/` committed on main,
+ * then, when the sample names a branch, `branch/` laid over it and committed on
+ * `harness.branch.name`. A sample's own `lib/` replaces the seed's library.
  */
 export interface HarvestExpectation {
   description: string
-  phases: ['harvest']
+  phases: [LibraryPhase]
   harness: {
-    branch: { name: string; message: string }
+    /** required for harvest, which reads the branch's work; dedupe and sync run on main */
+    branch?: { name: string; message: string }
     /** take seed/ from another sample instead of this one */
     seedFrom?: string
+    /** take branch/ from another sample instead of this one */
+    branchFrom?: string
   }
   expect: ContentExpect & {
     /** The library is the one the workspace's .forge.json names. */
@@ -94,7 +112,9 @@ export interface HarvestExpectation {
 
 export type Expectation = PhaseExpectation | HarvestExpectation
 
-export const isHarvest = (e: Expectation): e is HarvestExpectation => e.phases?.[0] === 'harvest'
+/** A sample that runs one lesson-library command (harvest, dedupe, or sync) rather than the phases. */
+export const isHarvest = (e: Expectation): e is HarvestExpectation =>
+  (LIBRARY_PHASES as readonly string[]).includes(e.phases?.[0] as string)
 
 export interface Finding {
   check: string
@@ -110,7 +130,7 @@ export function validateExpectation(e: unknown): string[] {
   const x = e as Expectation
   if (!x || typeof x !== 'object') return ['not an object']
   if (typeof x.description !== 'string' || !x.description) errs.push('description missing')
-  if (Array.isArray(x.phases) && x.phases[0] === 'harvest') return [...errs, ...validateHarvest(x as HarvestExpectation)]
+  if (isHarvest(x)) return [...errs, ...validateHarvest(x)]
   if (!Array.isArray(x.phases) || x.phases.length === 0) errs.push('phases missing')
   else if (x.phases.some(p => !PHASES.includes(p))) errs.push(`unknown phase in ${x.phases.join(',')}`)
   else if (x.phases[0] !== 'scope') errs.push('phases must start with scope')
@@ -121,6 +141,15 @@ export function validateExpectation(e: unknown): string[] {
   }
   const ex = (x as PhaseExpectation).expect
   if (!ex) return [...errs, 'expect missing']
+  const alts = (x as PhaseExpectation).anyOf
+  if (alts !== undefined) {
+    if (!Array.isArray(alts) || alts.length === 0) return [...errs, 'anyOf must be a non-empty list']
+    for (const a of alts) {
+      if (!a || typeof a.name !== 'string' || !a.name) { errs.push('each anyOf outcome needs a name'); continue }
+      const { name, ...rest } = a
+      errs.push(...validateExpectation({ ...x, anyOf: undefined, expect: { ...ex, ...rest } }).map(e => `anyOf "${name}": ${e}`))
+    }
+  }
   if (!['throwaway', 'tool', 'product'].includes(ex.sizeClass)) errs.push('expect.sizeClass invalid')
   if (typeof ex.hasUI !== 'boolean') errs.push('expect.hasUI must be boolean')
   if (!Array.isArray(ex.approvals) || ex.approvals.some(a => !APPROVALS.includes(a))) errs.push('expect.approvals invalid')
@@ -139,13 +168,19 @@ function validateContent(ex: ContentExpect): string[] {
 
 function validateHarvest(x: HarvestExpectation): string[] {
   const errs: string[] = []
-  if (x.phases.length !== 1) errs.push('a harvest sample runs harvest alone')
+  if (x.phases.length !== 1) errs.push(`a ${x.phases[0]} sample runs ${x.phases[0]} alone`)
   const b = x.harness?.branch
-  if (!b?.name || !b.message) errs.push('harness.branch needs name and message')
+  if (x.phases[0] === 'harvest' && !b) errs.push('a harvest sample needs harness.branch: it harvests a branch')
+  if (b && (!b.name || !b.message)) errs.push('harness.branch needs name and message')
   const lib = x.expect?.library
   if (!lib) return [...errs, 'expect.library missing']
   const regexes = [...(lib.lessons ?? []).map(l => l.match), ...(lib.absent ?? []).map(a => a.pattern)]
-  for (const l of lib.lessons ?? []) if (!l.match || !l.why) errs.push(`library lesson needs match and why: ${JSON.stringify(l)}`)
+  for (const l of lib.lessons ?? []) {
+    if (!l.match || !l.why) errs.push(`library lesson needs match and why: ${JSON.stringify(l)}`)
+    if (l.idOrAlias && (!Array.isArray(l.idOrAlias) || l.idOrAlias.some(i => typeof i !== 'string'))) {
+      errs.push(`library lesson idOrAlias must be a list of ids: ${JSON.stringify(l)}`)
+    }
+  }
   for (const a of lib.absent ?? []) if (!a.pattern || !a.why) errs.push(`library absent needs pattern and why: ${JSON.stringify(a)}`)
   for (const r of regexes) if (r) try { new RegExp(r, 'i') } catch { errs.push(`bad regex: ${r}`) }
   return [...errs, ...validateContent(x.expect)]
@@ -213,9 +248,22 @@ export async function checkProject(dir: string, exp: Expectation, forgeRoot: str
   const out: Finding[] = []
   const fail: Fail = (check, message) => { out.push({ check, message }) }
   if (isHarvest(exp)) await checkHarvest(dir, exp, fail)
+  else if (exp.anyOf?.length) return checkOutcomes(dir, exp, forgeRoot)
   else if (!(await checkPhases(dir, exp, forgeRoot, fail))) return out
   await checkContent(dir, exp.expect, fail)
   return out
+}
+
+/** Passes when the base outcome or any `anyOf` outcome holds; otherwise reports each one's findings. */
+async function checkOutcomes(dir: string, exp: PhaseExpectation, forgeRoot: string): Promise<Finding[]> {
+  const outcomes = [{ name: 'expect', over: {} }, ...exp.anyOf!.map(({ name, ...over }) => ({ name, over }))]
+  const all: Finding[] = []
+  for (const o of outcomes) {
+    const f = await checkProject(dir, { ...exp, anyOf: undefined, expect: { ...exp.expect, ...o.over } }, forgeRoot)
+    if (!f.length) return []
+    all.push(...f.map(x => ({ check: `${o.name}:${x.check}`, message: x.message })))
+  }
+  return all
 }
 
 type Fail = (check: string, message: string) => void
@@ -294,6 +342,13 @@ async function checkPhases(dir: string, exp: PhaseExpectation, forgeRoot: string
   {
     for (const rel of ['CLAUDE.md', 'docs/context/status.md', 'docs/context/decisions.md']) {
       if (!(await has(rel))) fail('build', `${rel} missing`)
+    }
+    // the handoff asked how the plan runs, and recorded the answer
+    const execution = state.execution
+    if (!execution || typeof execution.parallel !== 'boolean' || !Number.isInteger(execution.maxAgents) || execution.maxAgents < 1) {
+      fail('build.execution', `state.json has no execution choice (parallel agents or one at a time): ${JSON.stringify(execution ?? null)}`)
+    } else if (!execution.parallel && execution.maxAgents !== 1) {
+      fail('build.execution', `one at a time, but maxAgents is ${execution.maxAgents}`)
     }
     const playwright = (await has('playwright.config.ts')) || (await has('playwright.config.js')) ||
       (await has('pytest.ini') && /playwright/i.test((await readIf(join(dir, 'pytest.ini'))) ?? ''))
@@ -386,6 +441,11 @@ async function checkHarvest(dir: string, exp: HarvestExpectation, fail: Fail): P
     for (const t of w.tags ?? []) if (!tagOk(l.tags, t)) fail('library', `${l.id} lacks tag ${t} (has ${l.tags.join(', ')}) — ${w.why}`)
     if (w.evidence !== undefined && l.evidence.length !== w.evidence) {
       fail('library', `${l.id} has ${l.evidence.length} evidence entries, expected ${w.evidence} — ${w.why}`)
+    }
+    for (const id of w.idOrAlias ?? []) {
+      if (l.id !== id && !l.aliases?.includes(id)) {
+        fail('library', `${l.id} does not answer to ${id} (aliases: ${l.aliases?.join(', ') || 'none'}) — ${w.why}`)
+      }
     }
   }
   if (want.style) {

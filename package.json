@@ -12,6 +12,7 @@
     "verify": "tsc --noEmit && vitest run",
     "eval": "tsx evals/src/run.ts",
     "eval:check": "tsx evals/src/run.ts check",
+    "eval:receipt": "tsx evals/src/receipt.ts check",
     "forge": "tsx src/cli.ts",
     "skills:readme": "tsx src/skill-results.ts"
   },

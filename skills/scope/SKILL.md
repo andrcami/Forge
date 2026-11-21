@@ -19,6 +19,9 @@ confident architecture for the wrong product.
 
 Read `docs/forge/state.json` if it exists. Scope may always run — but if a scope
 is already approved, say so and ask whether this is a revision before overwriting.
+If an escalation owned by `scope` is open, this run is the revision that resolves
+it: start from its `conflict` and `proposal`, and set `escalation` to `null` when
+the user approves the revised scope.
 
 ## The interview
 

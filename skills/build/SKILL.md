@@ -89,6 +89,10 @@ before the first feature does.
   tests from this table
 - **Binding rules** — one per architecture decision with a failure mode, naming
   the integration test that guards it
+- **Riskiest assumptions** — one row per riskiest assumption in the scope,
+  quoting it word for word, with what fails if it is wrong and the test that
+  guards it. When no test can prove it (it depends on another team, say), name
+  the test that limits the damage and the check made by hand before launch
 - **UI/UX checks**, when UI is in scope — Playwright e2e plus the accessibility,
   keyboard, visual-regression, and reduced-motion checks from
   `references/qa/playwright.md`, at the breakpoints and themes `DESIGN.md` names,
@@ -178,6 +182,10 @@ a generated `SKILL.md` or `CLAUDE.md`.
 
   Proving the harness runs means running these commands — at least `install`
   and `test` here, and the rest wherever the services and a browser exist
+- Fonts — when UI is in scope, the typefaces `DESIGN.md` names are bundled with
+  the repo (`next/font/local` with the files committed, or an `@fontsource`
+  package), never fetched from a font CDN at build time: a build that needs the
+  network fails in offline CI and whenever the CDN hiccups
 - Repo bones — `git init`, the branch model, a CI skeleton for the chosen stack
 - Test harness — each layer's runner configured and **proven to run**: one
   trivial passing test per layer, executed, so the first real test lands in a
@@ -208,5 +216,50 @@ Design skills only matter when UI is in scope. Their install commands are in
 
 ## Handoff
 
+### Ask how the plan runs: parallel agents or one at a time
+
+Before the plan is written, ask the user once whether its independent tasks
+should run as **parallel agents** or **one at a time**. Skip the question when
+`state.json` already holds an `execution` entry, for example in a resumed
+session. Give the trade-off in two lines:
+
+- **Parallel agents** finish independent work sooner. Each agent works in its
+  own git worktree and branch, the agents use more of the plan's usage at once,
+  and two tasks that touch the same files conflict at merge.
+- **One at a time** is slower, but each task builds on the last one's merged
+  result, and there is nothing to merge between agents.
+
+Recommend one at a time for a `throwaway`, and for a `tool` whose first release
+is a few tasks in one module. Recommend parallel agents when the first release
+has independent work in separate modules or surfaces. Never start parallel
+agents without an explicit yes. Record the answer in `docs/forge/state.json`:
+
+```json
+"execution": { "parallel": true, "maxAgents": 3, "decided": "<ISO timestamp>" }
+```
+
+`maxAgents` is the number of agents the user allows at once; it is 1 when
+`parallel` is false.
+
+When the answer is **parallel**, the plan must:
+
+- Group the tasks into **waves**. Tasks in one wave share no files and do not
+  wait for each other. A task that needs another's result goes in a later wave.
+- Name the files each task changes, so the waves can be checked for overlap.
+- Give one task each shared file that many tasks would otherwise edit: the
+  schema and its migrations, lockfiles, shared types, `CLAUDE.md` and
+  `docs/context/`.
+- Run each agent in its own worktree and branch, merge a wave's branches
+  before the next wave starts, and run the `qa` skill's test command after each
+  merge.
+- Use `superpowers:dispatching-parallel-agents` or
+  `superpowers:subagent-driven-development` to run the waves when present, or
+  one subagent a task through the Agent tool when absent.
+
+When the answer is **one at a time**, write the plan as usual.
+
+### Write the plan
+
 Invoke `superpowers:writing-plans` when present, or a built-in plan path when
-absent. Say which. That is the terminal step — do not start implementing.
+absent. Say which, and pass it the `execution` choice. That is the terminal
+step — do not start implementing.

@@ -96,6 +96,11 @@ sits at the root because that is where Claude Design, Stitch, and other design
 agents look for it. Record why the winning direction won **and why each loser
 lost**.
 
+Keep every `##` heading exactly as the template writes it: the build phase, the
+generated skills and other design agents find sections by heading. A name for
+the direction ("The shop board") goes in the first line under `## Direction`,
+not in the heading.
+
 Append the binding design decisions to `docs/context/decisions.md`.
 
 The review gate names **what** must hold — breakpoints, themes, the
@@ -122,7 +127,8 @@ Stop and send work backward when:
 - A required asset does not exist and the direction depends on it → re-draw the
   direction, or **scope** if the asset was promised
 
-Write the escalation to `state.json`, as the architecture phase does.
+Write the escalation to `state.json` in the format the architecture skill gives,
+with `"from": "design"`.
 
 ## Next
 

@@ -4,15 +4,17 @@
  *   npm run eval -- [project…] [--yolo] [--no-verify] [--model <id>]
  *   npm run eval:check -- <workspace> <project>
  *
- * A harvest sample instead starts from a git repo the runner builds: seed/ on
- * main, branch/ laid over it on a feature branch. /forge:harvest then runs on it.
+ * A library sample (harvest, dedupe, sync) instead starts from a git repo the
+ * runner builds: seed/ on main and, for a harvest, branch/ laid over it on a
+ * feature branch. The sample's one command then runs on it.
  *
  * Each sample runs in a fresh temp workspace. The simulated user's answers
  * (brief.md) are copied in; the expectations (expect.json) never are, so the
  * phases cannot read what they are graded against.
  */
 import { spawn, execFileSync } from 'node:child_process'
-import { access, cp, mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises'
+import { access, cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { readdirSync, readlinkSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -21,6 +23,7 @@ import {
   type Expectation, type Finding, type HarvestExpectation, type PhaseExpectation, type PluginPin, type VerifyStep,
 } from './check.js'
 import { resolveClaudeBin, systemDeps } from './claude-bin.js'
+import { record, type SampleResult } from './receipt.js'
 
 const FORGE = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const PROJECTS = join(FORGE, 'evals', 'projects')
@@ -40,8 +43,10 @@ an automated test of the Forge plugin itself.
 - Follow the skill exactly otherwise — including refusing to run when its gate
   says so, and raising an escalation when its triggers fire. A refusal is a
   correct outcome, not a failure; state it and stop.
-- At the build phase's terminal handoff, state which planning path you would
-  take, and stop. Do not write an implementation plan.
+- At the build phase's terminal handoff, answer its parallel-agents question
+  as the brief says (one at a time when the brief does not say), record it as
+  the skill describes, state which planning path you would take, and stop. Do
+  not write an implementation plan.
 - Install nothing globally. Keep every file inside this directory, temp files
   included.
 - Run one command per Bash call where you can: chained commands are more
@@ -61,6 +66,8 @@ const PHASE_PROMPT: Record<string, string> = {
   design: '/forge:design — run this phase for the project in this directory.',
   build: '/forge:build — run this phase for the project in this directory.',
   harvest: '/forge:harvest — the current branch is finished and its PR is about to open; harvest it against main.',
+  dedupe: '/forge:lessons dedupe — find lessons in the library that state the same rule and merge them.',
+  sync: '/forge:lessons sync — bring this project\'s skills up to date with the lesson library.',
 }
 
 /** Harvest reads and writes the library through the plugin's CLI, by name or by path. */
@@ -125,10 +132,11 @@ function runPhase(cwd: string, phase: string, opts: { yolo: boolean; model?: str
   return new Promise((res, rej) => {
     // the eval tests the phases: not whether this checkout is the newest release, nor the chat-style offer
     const env = { ...process.env, FORGE_NO_UPDATE_CHECK: '1', FORGE_EVAL: '1' }
-    const child = spawn(claudeBin(), args, { cwd, env, stdio: ['ignore', 'pipe', 'inherit'] })
+    const child = spawn(claudeBin(), args, { cwd, env, detached: true, stdio: ['ignore', 'pipe', 'inherit'] })
     let stdout = ''
     child.stdout.on('data', d => { stdout += d })
     child.on('error', rej)
+    child.on('exit', () => reap(cwd, child.pid))
     child.on('close', async code => {
       await writeFile(join(cwd, 'docs', 'eval', `transcript-${phase}.json`), stdout)
       res(code ?? 1)
@@ -136,13 +144,37 @@ function runPhase(cwd: string, phase: string, opts: { yolo: boolean; model?: str
   })
 }
 
+/**
+ * Kills what a phase or verify command left running: its process group, and (on
+ * Linux) any other process whose working directory is in the workspace, which
+ * catches a server the nested session started in a group of its own. Otherwise it
+ * holds its port, and the next sample's Playwright webServer refuses to start.
+ */
+function reap(workspace: string, pid: number | undefined): void {
+  if (pid) try { process.kill(-pid, 'SIGKILL') } catch { /* group already gone */ }
+  try { workspace = realpathSync(workspace) } catch { return }
+  let pids: string[]
+  try { pids = readdirSync('/proc').filter(p => /^\d+$/.test(p)) } catch { return } // no /proc: macOS
+  for (const p of pids) {
+    if (Number(p) === process.pid) continue
+    try {
+      const dir = readlinkSync(`/proc/${p}/cwd`)
+      if (dir === workspace || dir.startsWith(workspace + '/')) process.kill(Number(p), 'SIGKILL')
+    } catch { /* gone, or not ours to read */ }
+  }
+}
+
 function sh(cwd: string, command: string): Promise<VerifyStep> {
   return new Promise(res => {
-    const child = spawn('sh', ['-c', command], { cwd, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, CI: '1' } })
+    // its own process group, killed whole when the command ends: a dev server that
+    // Playwright's webServer starts can outlive the run and hold the port the next
+    // sample's tests need
+    const child = spawn('sh', ['-c', command], { cwd, detached: true, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, CI: '1' } })
     let out = ''
     child.stdout.on('data', d => { out += d })
     child.stderr.on('data', d => { out += d })
-    const timer = setTimeout(() => child.kill('SIGKILL'), VERIFY_TIMEOUT_MS)
+    const timer = setTimeout(() => reap(cwd, child.pid), VERIFY_TIMEOUT_MS)
+    child.on('exit', () => reap(cwd, child.pid))
     child.on('close', code => {
       clearTimeout(timer)
       res({ command, code: code ?? 124, tail: out.split('\n').slice(-40).join('\n') })
@@ -178,6 +210,11 @@ export default {
 }
 `
 
+/** Points each `playwright test` in a command at the eval config, wherever it sits in a chain. */
+function evalPlaywright(command: string): string {
+  return command.replace(/playwright test\b/g, 'playwright test -c docs/eval/playwright.eval.config.ts')
+}
+
 /**
  * Runs the generated project's own commands from docs/forge/commands.json and
  * records the result in docs/eval/verify.json for the checker. A harness that
@@ -196,7 +233,9 @@ async function verifyBuild(cwd: string, exp: PhaseExpectation): Promise<void> {
     const nodePlaywright = await access(join(cwd, 'playwright.config.ts')).then(() => true, () => false)
     if (chromium && nodePlaywright && /playwright test/.test(command)) {
       await writeFile(join(cwd, 'docs', 'eval', 'playwright.eval.config.ts'), EVAL_PLAYWRIGHT_CONFIG)
-      command = `EVAL_CHROMIUM=${chromium} ${command} -c docs/eval/playwright.eval.config.ts`
+      // export, not a VAR=x prefix: the command can be a chain (`npm run build &&
+      // npx playwright test`), and a prefix reaches only its first command
+      command = `export EVAL_CHROMIUM=${JSON.stringify(chromium)}; ${evalPlaywright(command)}`
     }
     process.stdout.write(`  verify:${key}… `)
     steps[key] = await sh(cwd, command)
@@ -208,28 +247,50 @@ async function verifyBuild(cwd: string, exp: PhaseExpectation): Promise<void> {
 }
 
 /**
- * Builds a harvest sample's repo: seed/ committed on main, then branch/ laid
- * over it and committed on the feature branch. Snapshots the files the sample
- * expects to stay unchanged, and keeps docs/eval out of git so the harvest
- * sees only the branch's own work.
+ * Builds a library sample's repo: seed/ committed on main, the sample's own
+ * lib/ in place of the seed's library, then, when the sample names a branch,
+ * branch/ laid over it and committed on that branch. Snapshots the files the
+ * sample expects to stay unchanged, and keeps docs/eval out of git so a
+ * harvest sees only the branch's own work.
  */
 async function buildBranch(workspace: string, name: string, exp: HarvestExpectation): Promise<void> {
   const git = (...a: string[]) => execFileSync('git',
     ['-c', 'user.name=Forge Eval', '-c', 'user.email=eval@forge.invalid', '-c', 'commit.gpgsign=false', ...a],
     { cwd: workspace, stdio: 'ignore' })
-  await cp(join(PROJECTS, exp.harness.seedFrom ?? name, 'seed'), workspace, { recursive: true })
+  await cp(join(PROJECTS, exp.harness?.seedFrom ?? name, 'seed'), workspace, { recursive: true })
+  const ownLib = join(PROJECTS, name, 'lib')
+  if (await access(ownLib).then(() => true, () => false)) {
+    await rm(join(workspace, 'lib'), { recursive: true, force: true })
+    await cp(ownLib, join(workspace, 'lib'), { recursive: true })
+  }
   git('init', '-q', '--initial-branch=main')
   await writeFile(join(workspace, '.git', 'info', 'exclude'), 'docs/eval/\n')
   git('add', '-A')
   git('commit', '-q', '-m', 'Initial state')
-  git('checkout', '-q', '-b', exp.harness.branch.name)
-  await cp(join(PROJECTS, name, 'branch'), workspace, { recursive: true })
-  git('add', '-A')
-  git('commit', '-q', '-m', exp.harness.branch.message)
+  const branch = exp.harness?.branch
+  if (branch) {
+    git('checkout', '-q', '-b', branch.name)
+    await cp(join(PROJECTS, exp.harness?.branchFrom ?? name, 'branch'), workspace, { recursive: true })
+    git('add', '-A')
+    git('commit', '-q', '-m', branch.message)
+  }
 
   const snapshot: Record<string, string | null> = {}
   for (const f of exp.expect.unchanged ?? []) snapshot[f] = await readFile(join(workspace, f), 'utf8').catch(() => null)
   await writeFile(join(workspace, 'docs', 'eval', 'snapshot.json'), JSON.stringify(snapshot, null, 2))
+}
+
+/** What the run would cost at API prices, summed from the phase transcripts. */
+async function runCost(cwd: string, phases: string[]): Promise<number | undefined> {
+  let total = 0
+  for (const p of phases) {
+    try { total += JSON.parse(await readFile(join(cwd, 'docs', 'eval', `transcript-${p}.json`), 'utf8')).total_cost_usd ?? 0 } catch { /* no transcript */ }
+  }
+  return total ? Math.round(total * 100) / 100 : undefined
+}
+
+function claudeVersion(): string | null {
+  try { return execFileSync(claudeBin(), ['--version'], { encoding: 'utf8' }).trim().split(/\s/)[0] || null } catch { return null }
 }
 
 function report(name: string, exp: Expectation, findings: Finding[], workspace: string): boolean {
@@ -262,28 +323,43 @@ async function main() {
   // validate every fixture before spending anything
   const loaded = await Promise.all(selected.map(async n => [n, await loadProject(n)] as const))
 
+  // a receipt certifies the default run: not one with permissions bypassed or the build's commands skipped
+  const certify = !flag('--yolo') && !flag('--no-verify')
+  const results: Record<string, SampleResult> = {}
   let failed = 0
   for (const [name, { brief, exp }] of loaded) {
     const workspace = await mkdtemp(join(tmpdir(), `forge-eval-${name}-`))
-    await mkdir(join(workspace, 'docs', 'eval'), { recursive: true })
-    await writeFile(join(workspace, 'docs', 'eval', 'brief.md'), brief)
-    const pins = isHarvest(exp) ? [] : exp.harness?.plugins ?? []
-    if (isHarvest(exp)) await buildBranch(workspace, name, exp)
-    else await cp(join(PROJECTS, name, 'seed'), workspace, { recursive: true }).catch(() => {})
+    let ok: boolean
+    try {
+      await mkdir(join(workspace, 'docs', 'eval'), { recursive: true })
+      await writeFile(join(workspace, 'docs', 'eval', 'brief.md'), brief)
+      const pins = isHarvest(exp) ? [] : exp.harness?.plugins ?? []
+      if (isHarvest(exp)) await buildBranch(workspace, name, exp)
+      else await cp(join(PROJECTS, name, 'seed'), workspace, { recursive: true }).catch(() => {})
 
-    const plugins = await Promise.all(pins.map(ensurePlugin))
-    console.log(`\n▶ ${name}: ${exp.phases.join(' → ')}${pins.length ? ` (with ${pins.map(p => p.name).join(', ')})` : ''}`)
-    for (const phase of exp.phases) {
-      process.stdout.write(`  ${phase}… `)
-      const code = await runPhase(workspace, phase, { yolo: flag('--yolo'), model, plugins })
-      console.log(code === 0 ? 'done' : `exited ${code}`)
+      const plugins = await Promise.all(pins.map(ensurePlugin))
+      console.log(`\n▶ ${name}: ${exp.phases.join(' → ')}${pins.length ? ` (with ${pins.map(p => p.name).join(', ')})` : ''}`)
+      for (const phase of exp.phases) {
+        process.stdout.write(`  ${phase}… `)
+        const code = await runPhase(workspace, phase, { yolo: flag('--yolo'), model, plugins })
+        console.log(code === 0 ? 'done' : `exited ${code}`)
+      }
+      if (!isHarvest(exp) && exp.phases.includes('build') && !flag('--no-verify')) await verifyBuild(workspace, exp)
+      ok = report(name, exp, await checkProject(workspace, exp, FORGE), workspace)
+    } catch (e) {
+      // one sample's broken setup is that sample's failure: the others still run and are recorded
+      ok = report(name, exp, [{ check: 'harness', message: `the runner failed: ${(e as Error).message}` }], workspace)
     }
-    if (!isHarvest(exp) && exp.phases.includes('build') && !flag('--no-verify')) await verifyBuild(workspace, exp)
-    const ok = report(name, exp, await checkProject(workspace, exp, FORGE), workspace)
     if (!ok) failed++
+    results[name] = { passed: ok, ranAt: new Date().toISOString(), costUsd: await runCost(workspace, exp.phases) }
   }
 
   console.log(`\n${loaded.length - failed}/${loaded.length} sample projects passed`)
+  if (certify) {
+    const receipt = await record(FORGE, results, { claude: claudeVersion(), model: model ?? null })
+    const missing = all.filter(n => !receipt.samples[n])
+    console.log(`receipt: evals/receipt.json updated${missing.length ? `; not yet run against these files: ${missing.join(', ')}` : ''}`)
+  } else console.log('receipt: not updated (--yolo or --no-verify)')
   process.exit(failed ? 1 : 0)
 }
 
