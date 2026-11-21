@@ -58,6 +58,10 @@ artifact and run `npm run skills:readme -- <its folder>`.
   your change. The plugin cache is keyed by version.
 - **Keep PRs focused.** One concern per pull request.
 
+## Conduct
+
+Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Licence
 
 By contributing, you agree that your contribution is licensed under the MIT
