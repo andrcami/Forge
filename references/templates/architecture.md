@@ -23,6 +23,12 @@
 
 <The modules, and what each owns. Name the contracts between them.>
 
+## Diagram
+
+<A link to `docs/forge/architecture.html` when Archify drew it; otherwise a
+Mermaid `flowchart` with one node per module above and one labelled edge per
+contract between them.>
+
 ## Data model sketch
 
 <Core entities and their relationships. Not a schema — a sketch.>

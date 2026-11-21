@@ -109,6 +109,15 @@ describe('checkProject', () => {
       .toContain('anyOf "x": expect.sizeClass invalid')
   })
 
+  it('accepts a pin with a skill directory and a track, and rejects bad ones', () => {
+    const pin = { name: 'archify', repo: 'tt-a1i/archify', ref: 'a'.repeat(40) }
+    const withPin = (p: object) => validateExpectation({ ...apiTool, harness: { plugins: [{ ...pin, ...p }] } } as PhaseExpectation)
+    expect(withPin({ skill: 'archify', track: 'tags' })).toEqual([])
+    expect(withPin({ skill: '../outside' }).join()).toMatch(/skill must be a relative directory/)
+    expect(withPin({ skill: '/abs' }).join()).toMatch(/skill must be a relative directory/)
+    expect(withPin({ track: 'latest' }).join()).toMatch(/track must be "tags" or "branch"/)
+  })
+
   it('catches a DESIGN.md the design phase should have refused to write', async () => {
     await goodApiWorkspace()
     await put('DESIGN.md', '# design')

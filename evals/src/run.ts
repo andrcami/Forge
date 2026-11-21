@@ -88,7 +88,8 @@ async function loadProject(name: string): Promise<{ brief: string; exp: Expectat
 /**
  * Clones an external plugin at its pinned commit, once. A repo with skills but no
  * plugin manifest (installed with `npx skills add` in real use) gets a minimal one,
- * so `--plugin-dir` can load it.
+ * so `--plugin-dir` can load it; a pin naming a `skill` directory outside `skills/`
+ * gets it copied to `skills/<name>/`, where a plugin's skills are found.
  */
 async function ensurePlugin(pin: PluginPin): Promise<string> {
   const dir = join(PLUGIN_CACHE, `${pin.name}@${pin.ref.slice(0, 12)}`)
@@ -106,17 +107,23 @@ async function ensurePlugin(pin: PluginPin): Promise<string> {
     await mkdir(dirname(manifest), { recursive: true })
     await writeFile(manifest, JSON.stringify({ name: pin.name, version: '0.0.0-eval' }, null, 2))
   }
+  if (pin.skill) {
+    const target = join(dir, 'skills', pin.name)
+    if (!(await access(join(target, 'SKILL.md')).then(() => true, () => false))) {
+      await cp(join(dir, pin.skill), target, { recursive: true })
+    }
+  }
   return dir
 }
 
 let claudeBinCache: string | undefined
 const claudeBin = () => (claudeBinCache ??= resolveClaudeBin(systemDeps))
 
-function runPhase(cwd: string, phase: string, opts: { yolo: boolean; model?: string; plugins: string[] }): Promise<number> {
+function runPhase(cwd: string, phase: string, opts: { yolo: boolean; model?: string; plugins: string[]; chromium?: string | null }): Promise<number> {
   const args = [
     '-p', PHASE_PROMPT[phase],
     '--plugin-dir', FORGE,
-    ...opts.plugins.flatMap(p => ['--plugin-dir', p]),
+    ...opts.plugins.flatMap(p => ['--plugin-dir', p, '--add-dir', p]),
     '--add-dir', FORGE, // the skills read the plugin's references/; real installs can read the plugin cache
     '--append-system-prompt', HARNESS_PROMPT,
     '--output-format', 'json',
@@ -131,7 +138,10 @@ function runPhase(cwd: string, phase: string, opts: { yolo: boolean; model?: str
 
   return new Promise((res, rej) => {
     // the eval tests the phases: not whether this checkout is the newest release, nor the chat-style offer
-    const env = { ...process.env, FORGE_NO_UPDATE_CHECK: '1', FORGE_EVAL: '1' }
+    // likewise Archify's: a run tests the pinned version, so an update notice is noise
+    const env: NodeJS.ProcessEnv = { ...process.env, FORGE_NO_UPDATE_CHECK: '1', FORGE_EVAL: '1', ARCHIFY_UPDATE_CHECK_DISABLED: '1' }
+    // Archify's browser check uses the same stand-in browser as the generated tests
+    if (opts.chromium && !env.ARCHIFY_CHROME) env.ARCHIFY_CHROME = opts.chromium
     const child = spawn(claudeBin(), args, { cwd, env, detached: true, stdio: ['ignore', 'pipe', 'inherit'] })
     let stdout = ''
     child.stdout.on('data', d => { stdout += d })
@@ -341,7 +351,7 @@ async function main() {
       console.log(`\n▶ ${name}: ${exp.phases.join(' → ')}${pins.length ? ` (with ${pins.map(p => p.name).join(', ')})` : ''}`)
       for (const phase of exp.phases) {
         process.stdout.write(`  ${phase}… `)
-        const code = await runPhase(workspace, phase, { yolo: flag('--yolo'), model, plugins })
+        const code = await runPhase(workspace, phase, { yolo: flag('--yolo'), model, plugins, chromium: plugins.length ? await standInChromium() : null })
         console.log(code === 0 ? 'done' : `exited ${code}`)
       }
       if (!isHarvest(exp) && exp.phases.includes('build') && !flag('--no-verify')) await verifyBuild(workspace, exp)
