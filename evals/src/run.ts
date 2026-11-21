@@ -226,6 +226,21 @@ function evalPlaywright(command: string): string {
 }
 
 /**
+ * A bare package-script call (`pnpm e2e`, `npm run e2e`, `yarn e2e`) becomes the
+ * script itself with node_modules/.bin on PATH, so the stand-in browser reaches a
+ * `playwright test` hidden behind the script name. Anything else is left as it is.
+ */
+async function expandScript(cwd: string, command: string): Promise<string> {
+  const m = /^\s*(?:pnpm(?: run)?|npm run|yarn(?: run)?)\s+([\w:.-]+)\s*$/.exec(command)
+  if (!m) return command
+  let scripts: Record<string, string> = {}
+  try { scripts = JSON.parse(await readFile(join(cwd, 'package.json'), 'utf8')).scripts ?? {} } catch { return command }
+  const body = scripts[m[1]]
+  if (!body || !/playwright test/.test(body)) return command
+  return `export PATH="$PWD/node_modules/.bin:$PATH"; ${body}`
+}
+
+/**
  * Runs the generated project's own commands from docs/forge/commands.json and
  * records the result in docs/eval/verify.json for the checker. A harness that
  * build claims runs, but does not, is the failure this exists to catch.
@@ -238,7 +253,7 @@ async function verifyBuild(cwd: string, exp: PhaseExpectation): Promise<void> {
     if (!commands[key]) continue
     if (key === 'integration') { steps.integration = 'skipped'; continue } // needs services the sandbox lacks
     if (key === 'e2e' && !exp.harness?.e2e) { steps.e2e = 'skipped'; continue }
-    let command = commands[key]
+    let command = key === 'e2e' ? await expandScript(cwd, commands[key]) : commands[key]
     const chromium = key === 'e2e' ? await standInChromium() : null
     const nodePlaywright = await access(join(cwd, 'playwright.config.ts')).then(() => true, () => false)
     if (chromium && nodePlaywright && /playwright test/.test(command)) {
