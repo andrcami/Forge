@@ -14,7 +14,8 @@
     "eval:check": "tsx evals/src/run.ts check",
     "eval:receipt": "tsx evals/src/receipt.ts check",
     "forge": "tsx src/cli.ts",
-    "skills:readme": "tsx src/skill-results.ts"
+    "skills:readme": "tsx src/skill-results.ts",
+    "pins:check": "tsx src/pin-check.ts"
   },
   "repository": {
     "type": "git",

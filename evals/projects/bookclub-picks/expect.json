@@ -29,6 +29,9 @@
         "DESIGN.md",
         "docs/forge/architecture.md",
         "e2e"
+      ],
+      "absent": [
+        "docs/forge/architecture.html"
       ]
     },
     "contains": [
@@ -56,6 +59,11 @@
         "file": "CLAUDE.md",
         "pattern": "DESIGN\\.md",
         "why": "CLAUDE.md links the binding design decision"
+      },
+      {
+        "file": "docs/forge/architecture.md",
+        "pattern": "```mermaid",
+        "why": "without Archify, the architecture is drawn as a Mermaid diagram in the document"
       }
     ],
     "notContains": [

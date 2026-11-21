@@ -63,6 +63,18 @@ match your surfaces:
 npx skills add kylezantos/design-motion-principles             # motion create + audit
 ```
 
+### Architecture diagrams
+
+The architecture phase draws the chosen modules and the contracts between them.
+With [Archify](https://github.com/tt-a1i/archify) installed, that is an
+interactive `docs/forge/architecture.html`; without it, a Mermaid diagram in
+`architecture.md`, which GitHub renders. Archify updates through however you
+installed it: Forge uses the version you have.
+
+```
+npx skills@1.9.0 add tt-a1i/archify --skill archify
+```
+
 ### Security
 
 Build generates a `security` skill for every non-throwaway project with a server

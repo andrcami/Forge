@@ -1,6 +1,11 @@
 {
-  "description": "API-only tool — design phase refuses (no UI), qa skill without e2e or UI checks",
+  "description": "API-only tool, run with Archify installed — design phase refuses (no UI), qa skill without e2e or UI checks, and the architecture is drawn as an Archify diagram",
   "phases": ["scope", "architect", "design", "build"],
+  "harness": {
+    "plugins": [
+      { "name": "archify", "repo": "tt-a1i/archify", "ref": "208acba8d412335185b2056fedf54b3405df43fb", "skill": "archify", "track": "tags" }
+    ]
+  },
   "expect": {
     "sizeClass": "tool",
     "hasUI": false,
@@ -11,14 +16,16 @@
       "absent": ["frontend", "design-system"]
     },
     "files": {
-      "present": ["docs/forge/architecture.md"],
+      "present": ["docs/forge/architecture.md", "docs/forge/architecture.html"],
       "absent": ["DESIGN.md", "playwright.config.ts"]
     },
     "contains": [
       { "file": ".claude/skills/qa/SKILL.md", "pattern": "signature|401", "why": "the signature-rejection acceptance check must become a test" },
       { "file": ".claude/skills/qa/SKILL.md", "pattern": "idempot|[Rr]iskiest assumption", "why": "the riskiest assumption (idempotent consumers) needs a guard" },
       { "file": "docs/forge/architecture.md", "pattern": "\\bGo\\b|golang", "why": "team fluency in Go should dominate for a 3-person team" },
-      { "file": ".claude/skills/security/SKILL.md", "pattern": "signature", "why": "the inbound webhook is a trust boundary, and its signature check is the rule at it" }
+      { "file": ".claude/skills/security/SKILL.md", "pattern": "signature", "why": "the inbound webhook is a trust boundary, and its signature check is the rule at it" },
+      { "file": "docs/forge/architecture.md", "pattern": "architecture\\.html", "why": "with Archify installed, the Diagram section links the drawing" },
+      { "file": "docs/forge/architecture.html", "pattern": "[Ww]ebhook", "why": "the drawing shows the system the document describes" }
     ],
     "notContains": [
       { "file": ".claude/skills/qa/SKILL.md", "pattern": "axe|toHaveScreenshot", "why": "no UI checks for an API-only service" }

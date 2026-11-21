@@ -43,8 +43,8 @@ samples a change touches to keep that usage small.
 | Sample | Class | UI | What it exercises |
 |---|---|---|---|
 | `csv-dedupe` | throwaway | no | Architecture and design are skipped; no `qa` skill; minimal scaffold |
-| `webhook-relay` | tool | no | The design phase refuses; `qa` maps flows and guards the riskiest assumption without UI checks; team fluency picks the stack |
-| `bookclub-picks` | tool | app | Short design phase, motion lens, Playwright smoke + axe at tool scale, no cross-browser |
+| `webhook-relay` | tool | no | Run with Archify: the architecture is drawn as `docs/forge/architecture.html`. The design phase refuses; `qa` maps flows and guards the riskiest assumption without UI checks; team fluency picks the stack |
+| `bookclub-picks` | tool | app | Without Archify, the architecture is drawn in Mermaid. Short design phase, motion lens, Playwright smoke + axe at tool scale, no cross-browser |
 | `bakery-landing` | tool | marketing | Fixed brand values survive into `DESIGN.md`; static site gets no backend or database |
 | `clinic-booking` | product | app + marketing | Full design with both surfaces, tenancy, EU residency, double-booking invariant, product-scale `qa` (WebKit, visual, keyboard) |
 | `realtime-contradiction` | product | app | A self-contradicting scope, caught before anything is built on it: architecture escalates to scope and design and build refuse, or scope cuts the impossible feature itself and says so (`anyOf`) |
@@ -123,13 +123,22 @@ its output. This is what proves that "the harness is scaffolded and proven to
 run" is true, not just claimed. These commands need network access for package
 installs. E2E also needs a browser, which is why it is opt-in per sample.
 
-## External design skills
+## External skills (design skills, Archify)
 
 A sample's `harness.plugins` lists plugins to install alongside Forge, each
 pinned to a commit SHA so a run is reproducible. The runner clones each once
 into `evals/.cache/plugins/` (gitignored) and loads it with `--plugin-dir`. A
-repo with skills but no plugin manifest gets a minimal one. To move a pin, update
-the SHA and re-run that sample.
+repo with skills but no plugin manifest gets a minimal one; `skill` names the
+directory holding the `SKILL.md` when it is not under `skills/` (Archify keeps it
+in `archify/`). The runner turns off Archify's update check and points its
+browser check at the same stand-in browser as the generated tests.
+
+Only the evals are pinned: a real project uses whatever version the user
+installed. `npm run pins:check` (and the weekly `Pin check` workflow, which keeps
+one `eval-pins` issue open while a pin is behind) compares each pin with upstream,
+the newest release tag for `"track": "tags"` and the default branch otherwise. To
+move a pin, update the SHA, re-run the samples that use it, and commit the new
+receipt.
 
 ## Library samples (harvest, dedupe, sync)
 

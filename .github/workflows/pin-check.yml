@@ -1,0 +1,58 @@
+# Weekly: are the skills the evals pin (Archify, the design skills) behind their
+# newest release? Projects always use the version the user installed; only the
+# eval samples are pinned, so a run tests the same thing every time. This keeps
+# one open issue, labelled eval-pins, while a pin is behind, and closes it once
+# every pin is current. Moving a pin is a normal PR with an eval run.
+name: Pin check
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays, 06:41 UTC
+    - cron: '41 6 * * 1'
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: pin-check
+  cancel-in-progress: true
+jobs:
+  pins:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TITLE: Eval pins are behind upstream releases
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Compare pins with upstream
+        id: check
+        run: |
+          set +e
+          npx tsx src/pin-check.ts > report.md
+          code=$?
+          set -e
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+      - name: Open or update the issue
+        if: steps.check.outputs.code == '1'
+        run: |
+          gh label create eval-pins --color BFD4F2 --description "An eval pin is behind upstream" --force
+          { echo "The weekly pin check found skills the evals pin behind their newest release."; echo; cat report.md; } > body.md
+          n=$(gh issue list --label eval-pins --state open --json number --jq '.[0].number')
+          if [ -n "$n" ]; then gh issue edit "$n" --body-file body.md; else gh issue create --title "$TITLE" --label eval-pins --body-file body.md; fi
+      - name: Close the issue once every pin is current
+        if: steps.check.outputs.code == '0'
+        run: |
+          for n in $(gh issue list --label eval-pins --state open --json number --jq '.[].number'); do
+            gh issue close "$n" --comment "Every eval pin is on its newest upstream release now."
+          done
+      - name: Fail when upstream could not be read
+        if: steps.check.outputs.code == '2'
+        run: |
+          echo "::error::Some pins could not be compared with upstream; see the summary."
+          exit 1

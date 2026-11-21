@@ -71,6 +71,25 @@ what stop the question being reopened every month.
 
 Seed `docs/context/decisions.md` with the binding decisions.
 
+### Draw it
+
+Draw the module boundaries, so the user approves a picture as well as prose.
+**State which path you took.**
+
+- **`archify` installed** — ask it for an `architecture` diagram of the
+  `## Module boundaries` section: every module, and each contract between them
+  as a labelled relationship. Output `docs/forge/architecture.html`, and keep the
+  candidate JSON beside it as `docs/forge/architecture.archify.json` so a redraw
+  starts from it. Follow Archify's own instructions for the format and commands;
+  never write its JSON from memory. Link the HTML from `## Diagram`.
+- **Absent, or its checks still fail after its own repair rounds** — a Mermaid
+  `flowchart` in `## Diagram`: one node per module, one labelled edge per
+  contract. Say why. When Archify is missing, mention once that
+  `npx skills@1.9.0 add tt-a1i/archify --skill archify` adds it; do not block on it.
+
+The diagram shows the document and never adds a module or contract the document
+lacks. When the architecture changes, redraw it from the new document.
+
 Present it and **ask for explicit approval**. On approval, stamp
 `approvals.architecture` in `state.json`.
 

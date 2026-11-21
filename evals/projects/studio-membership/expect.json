@@ -3,9 +3,9 @@
   "phases": ["scope", "architect", "design", "build"],
   "harness": {
     "plugins": [
-      { "name": "ui-ux-pro-max", "repo": "nextlevelbuilder/ui-ux-pro-max-skill", "ref": "7246805992a42b7bba37d4cac83b01416f0c6c44" },
-      { "name": "taste-skill", "repo": "leonxlnx/taste-skill", "ref": "a60a36dc2bb3bb77ccf17f2f62041f5ca8a458b9" },
-      { "name": "design-motion-principles", "repo": "kylezantos/design-motion-principles", "ref": "4a9ca879f24a361f4dca4174fe2da0f67b5ddee3" }
+      { "name": "ui-ux-pro-max", "repo": "nextlevelbuilder/ui-ux-pro-max-skill", "ref": "7246805992a42b7bba37d4cac83b01416f0c6c44", "track": "tags" },
+      { "name": "taste-skill", "repo": "leonxlnx/taste-skill", "ref": "a60a36dc2bb3bb77ccf17f2f62041f5ca8a458b9", "track": "tags" },
+      { "name": "design-motion-principles", "repo": "kylezantos/design-motion-principles", "ref": "4a9ca879f24a361f4dca4174fe2da0f67b5ddee3", "track": "tags" }
     ],
     "e2e": true
   },

@@ -10,6 +10,16 @@ export interface PluginPin {
   repo: string
   /** a full commit SHA */
   ref: string
+  /**
+   * The directory holding the skill's SKILL.md, for a repo that keeps it outside
+   * `skills/` (installed with `npx skills add` in real use). Omit for a plugin.
+   */
+  skill?: string
+  /**
+   * What the weekly pin check compares the pin with: the newest release tag, or
+   * the default branch's head (the default).
+   */
+  track?: 'tags' | 'branch'
 }
 
 /** One command the runner executed in the generated project. */
@@ -137,6 +147,12 @@ export function validateExpectation(e: unknown): string[] {
   for (const p of (x as PhaseExpectation).harness?.plugins ?? []) {
     if (!p.name || !/^[\w.-]+\/[\w.-]+$/.test(p.repo ?? '') || !/^[0-9a-f]{40}$/.test(p.ref ?? '')) {
       errs.push(`harness plugin needs name, owner/repo, and a 40-char commit SHA: ${JSON.stringify(p)}`)
+    }
+    if (p.skill !== undefined && (typeof p.skill !== 'string' || !/^[\w.-]+(\/[\w.-]+)*$/.test(p.skill) || p.skill.split('/').includes('..'))) {
+      errs.push(`harness plugin ${p.name}: skill must be a relative directory inside the repo`)
+    }
+    if (p.track !== undefined && p.track !== 'tags' && p.track !== 'branch') {
+      errs.push(`harness plugin ${p.name}: track must be "tags" or "branch"`)
     }
   }
   const ex = (x as PhaseExpectation).expect
