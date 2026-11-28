@@ -280,10 +280,14 @@ reminds Claude to suggest it once.
 **Updating:** `/plugin marketplace update forge`, then `/plugin update forge@forge`
 (or `claude plugin marketplace update forge` and `claude plugin update forge@forge`
 from a shell, or **Manage Plugins**). Start a new session afterwards so the
-new hooks load. When a newer version is out, Forge mentions it once at the start
-of a session; it checks GitHub at most once a day, in the background, and never
-updates anything itself. Turn the notice off with `"updateCheck": false` in
-`~/.claude/forge/config.json`. Use one lesson repo per context:
+new hooks load. When a newer version is out, Forge asks once at the start of a
+session: **Update now**, **Not now** (asked again next session), **Skip** that
+version (asked again when a newer one ships), or **Always update**. Nothing is
+installed until you choose. It checks GitHub at most once a day, in the
+background. **Always update** sets `"autoUpdate": true` in
+`~/.claude/forge/config.json`: from then on the update runs in the background at
+session start and Claude only mentions it; set it to `false` to be asked again.
+Turn the check off entirely with `"updateCheck": false`. Use one lesson repo per context:
 for work, a repo owned by the employer.
 
 **One machine, several contexts:** choose "just this project" in setup. It writes
